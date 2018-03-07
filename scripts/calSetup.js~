@@ -1,0 +1,9 @@
+
+//cal setup script
+module.exports = (robot) => {
+
+  robot.respond(/(cal setup)/i, function(msg) {
+    msg.reply("processing setup");
+  })
+
+}
