@@ -8,6 +8,7 @@ const ical2json = require('ical2json')
 
 
     function getTodaysDate(currentTimeZone) {
+      console.log('in todays date', moment().utc())
       return moment.utc()
     }
 
@@ -19,55 +20,36 @@ const ical2json = require('ical2json')
     var strMin = icalStr.substr(11,2);
     var strSec = icalStr.substr(13,2);
     let dateNeedsFormat = new Date(strYear,strMonth, strDay, strHour, strMin, strSec)
+	console.log('date needs format', dateNeedsFormat)
     return  moment(dateNeedsFormat, "YYYY-MM-DD HH:mm:ss Z")
   }
 
-  function wrkHrsParse(wrkHrs, timeZone) {
-	console.log('wrkHours coming in', wrkHrs)
-	console.log('things', momentTZ.tz(timeZone).utcOffset())
-
-	let start = {
-	  Hrs: wrkHrs.slice(0,2),
-	  Min: wrkHrs.slice(3,5)
-        }
-
-	let end = {
-          Hrs: wrkHrs.slice(8,10),
-          Min: wrkHrs.slice(11,13)
-        }
-
-
-	console.log('start hours', start.Min)
-	console.log('end hours', end.Min)	
-
-    return {
-      start: moment(wrkHrs.slice(0, wrkHrs.indexOf('-')),'hh:mm a').tz(timeZone).hours(start.Hrs).minutes(start.Min).utc(),
-      end: moment(wrkHrs.slice(wrkHrs.indexOf('-') + 1 ,wrkHrs.length),'hh:mm A').hours(end.Hrs).minutes(end.Min).utc()
-    }
-   }
 
 
   //
   //
   //
   //
+
+
+
   function findAvailabilityOverTime (dateArr, wrkHrs, dateAvailRequested, timeWindow) {
-  	console.log('dateArr', dateArr)
-  	console.log('wrkHrs', wrkHrs)
-  	console.log('dateAvail', dateAvailRequested)
-  	console.log('timeWindow', timeWindow)
+  console.log('dateArr', dateArr)
+  console.log('wrkHrs', wrkHrs)
+  console.log('dateAvail', dateAvailRequested)
+  console.log('timeWindow', timeWindow)
+
 
      if (timeWindow === 'day') {
 
         dateArr.forEach(date => {
 
-		console.log('date1',formatDate(date.DTSTART).date())
-		console.log('date2', dateAvailRequested.date())
-		console.log('wrkHrs',wrkHrs)
+		console.log('date1',new Date(formatDate(date.DTSTART)))
+		console.log('date2', new Date(dateAvailRequested).getDate())
 
 	 if (formatDate(date.DTSTART).date() === dateAvailRequested.date()) {
 
-	   console.log('date in while', formatDate(date.DTSTART).date())
+	   console.log('date in while', formatDate(date.DTSTART))
 
          }
 
@@ -90,13 +72,13 @@ let awaitingUrl = false, awaitingWorkHours = false, calSetupDone = false
     robot.hear(/^(http|https)/i ,function(msg) {
        if (awaitingUrl) {
 	  robot.brain.set(msg.message.user.id, {busyCalUrl: msg.message.text})
-	  msg.reply("Woof woof! URL was received... \n \n Excellent, now I need to know your preferred working hours when you will be available for meetings. \n \n Please enter them in the following format: <hr:min(am || pm)>-<hr:min(am || pm)> (e.g. 9:00am-5:00)")
+	  msg.reply("Woof woof! URL was received... \n \n Excellent, now I need to know your preferred working hours when you will be available for meetings. \n \n Please enter them in the following format: <hr:min>-<hr:min> (e.g. 9:00-5:00)")
           awaitingUrl = false
           awaitingWorkHours = true
       }
     })
 
-robot.hear(/([0-9]|[0-9][0-9]):[0-5][0-9](a|p)m-([0-9]|[0-9][0-9]):[0-5][0-9](a|p)m/i, function(msg) {
+   robot.hear(/([0-9]|[0-9][0-9]):[0-5][0-9]-([0-9]|[0-9][0-9]):[0-5][0-9]/i ,function(msg) {
      if (awaitingWorkHours) {
 		console.log('in save', robot.brain.get(msg.message.user.id))
          robot.brain.set(msg.message.user.id, {busyCalUrl: robot.brain.get(msg.message.user.id).busyCalUrl, workHrs: msg.message.text})
@@ -116,6 +98,8 @@ robot.hear(/([0-9]|[0-9][0-9]):[0-5][0-9](a|p)m-([0-9]|[0-9][0-9]):[0-5][0-9](a|
          .then((response)=> {
            let output = ical2json.convert(response);
 
+           console.log('here it is!!!!!!', output.VCALENDAR[0])
+
            let data = {
              dateArr : output.VCALENDAR[0].VEVENT,
 	     timeZone : output.VCALENDAR[0]["X-WR-TIMEZONE"]
@@ -123,14 +107,11 @@ robot.hear(/([0-9]|[0-9][0-9]):[0-5][0-9](a|p)m-([0-9]|[0-9][0-9]):[0-5][0-9](a|
 
            msg.reply("YOUR TIMEZONE: " + data.timeZone)
 
+           console.log('todays date', getTodaysDate(data.timeZone))
+
 	   // takes dates/day you want to find availability for && array of dates
 
-	 let wrkHrsInUTC =  wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone)
-
-	console.log('start',wrkHrsInUTC.start)
-	console.log('end',wrkHrsInUTC.end)	
-
-           findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, getTodaysDate(), 'day')
+           findAvailabilityOverTime(data.dateArr, robot.brain.get(msg.message.user.id).workHrs, getTodaysDate(), 'day')
 
          }).catch((err)=> {
            msg.reply("in err")

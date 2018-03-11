@@ -38,12 +38,20 @@ const ical2json = require('ical2json')
 
 
 	console.log('start hours', start.Min)
-	console.log('end hours', end.Min)	
+	console.log('end hours', end.Min)
 
-    return {
-      start: moment(wrkHrs.slice(0, wrkHrs.indexOf('-')),'hh:mm a').tz(timeZone).hours(start.Hrs).minutes(start.Min).utc(),
-      end: moment(wrkHrs.slice(wrkHrs.indexOf('-') + 1 ,wrkHrs.length),'hh:mm A').hours(end.Hrs).minutes(end.Min).utc()
-    }
+	
+
+
+	let timeZoneOffset = momentTZ.tz(timeZone).utcOffset() 
+
+	console.log('wrkHours start going out', moment(wrkHrs.slice(0, wrkHrs.indexOf('-')),'hh:mm a').tz(timeZone).hours(09).utc())
+
+//	console.log('wrkHours start going out', moment(wrkHrs.slice(0, wrkHrs.indexOf('-')),'hh:mm a').utcOffset(timeZoneOffset))
+   // return {
+     // start: momentTZ.tz(wrkHrs.slice(0,wrkHrs.indexOf('-')),'hh:mm A',),
+     // end: moment(wrkHrs.slice(wrkHrs.indexOf('-') + 1 ,wrkHrs.length),'hh:mm A')
+   // }
    }
 
 
@@ -116,6 +124,8 @@ robot.hear(/([0-9]|[0-9][0-9]):[0-5][0-9](a|p)m-([0-9]|[0-9][0-9]):[0-5][0-9](a|
          .then((response)=> {
            let output = ical2json.convert(response);
 
+           console.log('here it is!!!!!!', output.VCALENDAR[0])
+
            let data = {
              dateArr : output.VCALENDAR[0].VEVENT,
 	     timeZone : output.VCALENDAR[0]["X-WR-TIMEZONE"]
@@ -127,8 +137,7 @@ robot.hear(/([0-9]|[0-9][0-9]):[0-5][0-9](a|p)m-([0-9]|[0-9][0-9]):[0-5][0-9](a|
 
 	 let wrkHrsInUTC =  wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone)
 
-	console.log('start',wrkHrsInUTC.start)
-	console.log('end',wrkHrsInUTC.end)	
+	
 
            findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, getTodaysDate(), 'day')
 
