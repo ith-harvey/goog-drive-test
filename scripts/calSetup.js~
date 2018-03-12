@@ -23,9 +23,6 @@ const ical2json = require('ical2json')
   }
 
   function wrkHrsParse(wrkHrs, timeZone) {
-	console.log('wrkHours coming in', wrkHrs)
-	console.log('things', momentTZ.tz(timeZone).utcOffset())
-
 	let start = {
 	  Hrs: wrkHrs.slice(0,2),
 	  Min: wrkHrs.slice(3,5)
@@ -36,46 +33,72 @@ const ical2json = require('ical2json')
           Min: wrkHrs.slice(11,13)
         }
 
-
-	console.log('start hours', start.Min)
-	console.log('end hours', end.Min)
-
-	
-
-
-	let timeZoneOffset = momentTZ.tz(timeZone).utcOffset() 
-
-	console.log('wrkHours start going out', moment(wrkHrs.slice(0, wrkHrs.indexOf('-')),'hh:mm a').tz(timeZone).hours(09).utc())
-
-//	console.log('wrkHours start going out', moment(wrkHrs.slice(0, wrkHrs.indexOf('-')),'hh:mm a').utcOffset(timeZoneOffset))
-   // return {
-     // start: momentTZ.tz(wrkHrs.slice(0,wrkHrs.indexOf('-')),'hh:mm A',),
-     // end: moment(wrkHrs.slice(wrkHrs.indexOf('-') + 1 ,wrkHrs.length),'hh:mm A')
-   // }
+    return {
+      start: moment(wrkHrs.slice(0, wrkHrs.indexOf('-')),'hh:mm a').tz(timeZone).hours(start.Hrs).minutes(start.Min).utc(),
+      end: moment(wrkHrs.slice(wrkHrs.indexOf('-') + 1 ,wrkHrs.length),'hh:mm A').hours(end.Hrs).minutes(end.Min).utc()
+    }
    }
 
+
+  function  minutesOfDay(m) {
+    return m.minutes() + m.hours() * 60;
+  }
+
+  function recordAvailability(wrkHrs, eventStart, eventEnd) {
+	console.log('record availability',wrkHrs)
+	console.log('record availability',eventStart)
+	console.log('record availability',eventEnd)
+  }
 
   //
   //
   //
   //
   function findAvailabilityOverTime (dateArr, wrkHrs, dateAvailRequested, timeWindow) {
-  	console.log('dateArr', dateArr)
   	console.log('wrkHrs', wrkHrs)
   	console.log('dateAvail', dateAvailRequested)
   	console.log('timeWindow', timeWindow)
 
      if (timeWindow === 'day') {
 
-        dateArr.forEach(date => {
+        dateArr.forEach(date => { // loop over event dates
 
-		console.log('date1',formatDate(date.DTSTART).date())
+		console.log('date1', formatDate(date.DTSTART).date())
 		console.log('date2', dateAvailRequested.date())
-		console.log('wrkHrs',wrkHrs)
 
-	 if (formatDate(date.DTSTART).date() === dateAvailRequested.date()) {
+	 if (formatDate(date.DTSTART).date() === dateAvailRequested.date()) { // events that happen on selected day
 
-	   console.log('date in while', formatDate(date.DTSTART).date())
+		if (minutesOfDay(formatDate(date.DTSTART)) <= minutesOfDay(wrkHrs.start)) { // event start happens before || same time as wrkhrs start
+
+			console.log('compare 1 evend ends before wrkhrs start', minutesOfDay(formatDate(date.DTEND)) )
+                        console.log('compare 1 evend ends before wrkhrs start', minutesOfDay(wrkHrs.start) )
+
+			if (minutesOfDay(formatDate(date.DTEND)) <= minutesOfDay(wrkHrs.start)) { // event end happens before || same time as wrkhrs start
+			// the entire event happens before working hours
+			// do nothing -> go to next event
+			console.log('do nothing! event is not in work hours', formatDate(date.DTSTART))
+			console.log('do nothing! event is not in work hours', formatDate(date.DTEND))
+			} else {
+				//event ends during working hours
+				recordAvailability(wrkHrs, formatDate(date.DTSTART), formatDate(date.DTEND))
+			}
+		} else { // event start happens after wrkhrs start
+				console.log('compare 2 event start before wrkhrs end', typeof minutesOfDay(formatDate(date.DTSTART)) )
+
+
+			console.log('compare 2 event start before wrkhrs end', minutesOfDay(formatDate(date.DTSTART)) )
+                        console.log('compare 2 event start before wrkhrs start', minutesOfDay(wrkHrs.end) )
+			if (minutesOfDay(formatDate(date.DTSTART)) > minutesOfDay(wrkHrs.end)) { // event start happens before  wrkhrs end
+				recordAvailability(wrkHrs, formatDate(date.DTSTART), formatDate(date.DTEND)) // 2 Args (record whole chunk of availability from start || last event end - end)
+                        } else {
+			console.log('do nothing! event is not in work hours', formatDate(date.DTSTART))
+                        console.log('do nothing! event is not in work hours', formatDate(date.DTEND))
+			// the entire event happens after working hours
+                        // do nothing -> go to next event
+
+                        }
+
+		}
 
          }
 
@@ -124,8 +147,6 @@ robot.hear(/([0-9]|[0-9][0-9]):[0-5][0-9](a|p)m-([0-9]|[0-9][0-9]):[0-5][0-9](a|
          .then((response)=> {
            let output = ical2json.convert(response);
 
-           console.log('here it is!!!!!!', output.VCALENDAR[0])
-
            let data = {
              dateArr : output.VCALENDAR[0].VEVENT,
 	     timeZone : output.VCALENDAR[0]["X-WR-TIMEZONE"]
@@ -137,7 +158,8 @@ robot.hear(/([0-9]|[0-9][0-9]):[0-5][0-9](a|p)m-([0-9]|[0-9][0-9]):[0-5][0-9](a|
 
 	 let wrkHrsInUTC =  wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone)
 
-	
+	console.log('start',wrkHrsInUTC.start)
+	console.log('end',wrkHrsInUTC.end)	
 
            findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, getTodaysDate(), 'day')
 

@@ -22,11 +22,10 @@ const ical2json = require('ical2json')
     return  moment(dateNeedsFormat, "YYYY-MM-DD HH:mm:ss Z")
   }
 
-  function localTime(time, timeZone) {
-	return 
-	}
-
   function wrkHrsParse(wrkHrs, timeZone) {
+	console.log('wrkHours coming in', wrkHrs)
+	console.log('things', momentTZ.tz(timeZone).utcOffset())
+
 	let start = {
 	  Hrs: wrkHrs.slice(0,2),
 	  Min: wrkHrs.slice(3,5)
@@ -37,6 +36,10 @@ const ical2json = require('ical2json')
           Min: wrkHrs.slice(11,13)
         }
 
+
+	console.log('start hours parse', start.Min)
+	console.log('end hours parse', end.Min)	
+
     return {
       start: moment(wrkHrs.slice(0, wrkHrs.indexOf('-')),'hh:mm a').tz(timeZone).hours(start.Hrs).minutes(start.Min).utc(),
       end: moment(wrkHrs.slice(wrkHrs.indexOf('-') + 1 ,wrkHrs.length),'hh:mm A').hours(end.Hrs).minutes(end.Min).utc()
@@ -44,83 +47,29 @@ const ical2json = require('ical2json')
    }
 
 
-  function  minutesOfDay(m) {
-    return m.minutes() + m.hours() * 60;
-  }
-
-  function recordAvailability(wrkHrs, eventEnd, eventStart) {
-	//1) no events comin for that day (the entire day is free)
-	//2) 1 event comes in
-	//3) multiple events come in
-	//4) the entire day is booked
-
-	// if function is called with no args (AKA the script is asking for the recordObject)
-		// build out remainder of available spots then return recordObject
-
-
-	if (typeof lastEventEndTime == 'undefined') {   // first event that day
-		var lastEventEndTime = eventEnd
-		var suggestions = []
-	}
-
-	 if (eventStart === undefined) { // event started before working hours
-		return
-	}
-
-
-	let availTime = minutesOfDay(lastEventEndTime) - minutesOfDay(eventStart)
-
-	let suggestionStartPoint = lastEventEndTime
-
-	for (let i = 0; i <= (availTime / 60); i++) { // only create 60 min suggestions
-	
-		suggestions.push( {
-			start: suggestionStartPoint,
-			end: moment(suggestionStartPoint).add(1,'hours')  
-		})
-
-		suggestionStartPoint = moment(suggestionStartPoint).add(1,'hours')
-	}
-
-
-	console.log('current available time in minutes', suggestions)
-  }
-
   //
   //
   //
   //
   function findAvailabilityOverTime (dateArr, wrkHrs, dateAvailRequested, timeWindow) {
+  	console.log('dateArr', dateArr)
   	console.log('wrkHrs', wrkHrs)
+  	console.log('dateAvail', dateAvailRequested)
+  	console.log('timeWindow', timeWindow)
+        let whenLastEventEnded = ''
 
      if (timeWindow === 'day') {
+	// refactor with map / reduce?
+        dateArr.forEach(date => {
 
-        dateArr.forEach(date => { // loop over event dates
+		console.log('date1',formatDate(date.DTSTART).date())
+		console.log('date2', dateAvailRequested.date())
 
+	 if (formatDate(date.DTSTART).date() === dateAvailRequested.date()) {
 
-	 if (formatDate(date.DTSTART).date() === dateAvailRequested.date()) { // events that happen on selected day
+	   console.log('date in while', formatDate(date.DTSTART).date())
 
-		if (minutesOfDay(formatDate(date.DTSTART)) <= minutesOfDay(wrkHrs.start)) { // event start happens before || same time as wrkhrs start
-
-
-			if (minutesOfDay(formatDate(date.DTEND)) <= minutesOfDay(wrkHrs.start)) { // event end happens before || same time as wrkhrs start
-			// the entire event happens before working hours
-			// do nothing -> go to next event
-			} else {
-				//event ends during working hours
-				recordAvailability(wrkHrs, formatDate(date.DTEND))
-			}
-		} else { // event start happens after wrkhrs start
-
-			if (minutesOfDay(formatDate(date.DTSTART)) > minutesOfDay(wrkHrs.end)) { // event start happens before  wrkhrs end
-				recordAvailability(wrkHrs, formatDate(date.DTEND), formatDate(date.DTSTART)) // 2 Args (record whole chunk of availability from start || last event end - end)
-                        } else {
-			// the entire event happens after working hours
-                        // do nothing -> go to next event
-
-                        }
-
-		}
+		if( )
 
          }
 
@@ -179,9 +128,6 @@ robot.hear(/([0-9]|[0-9][0-9]):[0-5][0-9](a|p)m-([0-9]|[0-9][0-9]):[0-5][0-9](a|
 	   // takes dates/day you want to find availability for && array of dates
 
 	 let wrkHrsInUTC =  wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone)
-
-	console.log('start',wrkHrsInUTC.start)
-	console.log('end',wrkHrsInUTC.end)	
 
            findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, getTodaysDate(), 'day')
 
