@@ -5,8 +5,6 @@ const ical2json = require('ical2json')
 
 //cal setup script
 
-
-
     function getTodaysDate(currentTimeZone) {
       return moment.utc()
     }
@@ -37,8 +35,6 @@ const ical2json = require('ical2json')
           Hrs: wrkHrs.slice(8,10),
           Min: wrkHrs.slice(11,13)
         }
-
-
 
     return {
       start: moment(wrkHrs.slice(0, wrkHrs.indexOf('-')),'HH:mm').tz(timeZone).hours(start.Hrs).minutes(start.Min).utc(),
@@ -81,21 +77,20 @@ const ical2json = require('ical2json')
 
 	createAvailSuggestions(wrkHrs, eventStart) {
 
+		let availTime =  moment.duration(eventStart.diff(this.lastEventEndTime))
 
+		availTime = availTime.asMinutes()
 
-		let availTime =  minutesOfDay(eventStart) - minutesOfDay(this.lastEventEndTime)
-		console.log('availTIme', availTime)
        		 let suggestionStartPoint = this.lastEventEndTime
 
-		console.log('loop runs this many times', (availTime / 60))
 
        		for (let i = 1; i <= (availTime / 60); i++) { // only create 60 min suggestions
 
                		this.suggestions.push( {
-                        	start: `local time: ${localTime(suggestionStartPoint, wrkHrs.timeZone)} UTC: ${suggestionStartPoint}`,
-                       		 end: `local time: ${localTime(moment(suggestionStartPoint).add(1,'hours'),wrkHrs.timeZone)} UTC: ${moment(suggestionStartPoint).add(1,'hours')}`
+                        	start: `${wrkHrs.timeZone}: ${localTime(suggestionStartPoint, wrkHrs.timeZone)} UTC: ${suggestionStartPoint}`,
+                       		 end: `${wrkHrs.timeZone}: ${localTime(moment(suggestionStartPoint).add(1,'hours'),wrkHrs.timeZone)} UTC: ${moment(suggestionStartPoint).add(1,'hours')}`
                		 })
-                  suggestionStartPoint = moment(suggestionStartPoint).add(1,'hours')
+                  suggestionStartPoint = moment(suggestionStartPoint).add(1, 'hours')
 
           	 }
 	}
@@ -111,6 +106,7 @@ const ical2json = require('ical2json')
   //
   //
   //
+
   function findAvailabilityOverTime (eventArr, wrkHrs, dateAvailRequested, timeWindow, Availability) {
 
      if (timeWindow === 'day') {
@@ -121,9 +117,6 @@ const ical2json = require('ical2json')
 	 if (formatDate(date.DTSTART).date() === dateAvailRequested.date()) { // events that happen on selected day
 
 		if (minutesOfDay(formatDate(date.DTSTART)) <= minutesOfDay(wrkHrs.start)) { // event start happens before || same time as wrkhrs start
-
-			console.log('time match', minutesOfDay(formatDate(date.DTEND)))
-		        console.log('date match', minutesOfDay(wrkHrs.start))
 
 			if (minutesOfDay(formatDate(date.DTEND)) <= minutesOfDay(wrkHrs.start)) { // event end happens before || same time as wrkhrs start
 			// the entire event happens before working hours
@@ -197,18 +190,25 @@ robot.hear(/([0-9]|[0-9][0-9]):[0-5][0-9](a|p)m-([0-9]|[0-9][0-9]):[0-5][0-9](a|
 	     timeZone : output.VCALENDAR[0]["X-WR-TIMEZONE"]
            }
 
-           msg.reply("YOUR TIMEZONE: " + data.timeZone)
+		let dayRequested = getTodaysDate()
+
+           msg.reply("Your current Timezone (set at fastmail.com): " + data.timeZone)
 
 	   // takes dates/day you want to find availability for && array of dates
 
 	   let wrkHrsInUTC =  wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone)
 
 	   let Availability = new RecordAvailability()
-           findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, getTodaysDate(), 'day', Availability)
+           findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, dayRequested, 'day', Availability)
 
-	   console.log('record avail',Availability.get())
+		let suggestString = ''
+		Availability.get().forEach((suggestion, index) => {
 
-	msg.reply("available dates: /n" + Availability.get())
+		suggestString += `${index+1}) ${suggestion.start} \n ${suggestion.end} \n \n`
+
+		})
+
+	msg.reply(`Woof woof! Here are some meeting suggestions for ${dayRequested.format('LL')}:  \n \n` + suggestString)
          }).catch((err)=> {
            msg.reply("in err")
 		console.log('ERROR: ',err)
