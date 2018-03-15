@@ -35,6 +35,8 @@ const ical2json = require('ical2json')
           Hrs: wrkHrs.slice(8,10),
           Min: wrkHrs.slice(11,13)
         }
+	console.log('start', start.Hrs + start.Min)
+	console.log('end', end.Hrs + end.Min)
 
     return {
       start: moment(wrkHrs.slice(0, wrkHrs.indexOf('-')),'HH:mm').tz(timeZone).hours(start.Hrs).minutes(start.Min).utc(),
@@ -159,13 +161,13 @@ let awaitingUrl = false, awaitingWorkHours = false, calSetupDone = false
     robot.hear(/^(http|https)/i ,function(msg) {
        if (awaitingUrl) {
 	  robot.brain.set(msg.message.user.id, {busyCalUrl: msg.message.text})
-	  msg.reply("Woof woof! URL was received... \n \n Excellent, now I need to know your preferred working hours when you will be available for meetings. \n \n Please enter them in the following format: <hr:min(am || pm)>-<hr:min(am || pm)> (e.g. 9:00am-5:00)")
+	  msg.reply("Woof woof! URL was received... \n \n Excellent, now I need to know your preferred working hours when you will be available for meetings. \n \n Please enter them in 24hr format: <HH:mm>-<HH:mm> (e.g. 09:00-17:00)")
           awaitingUrl = false
           awaitingWorkHours = true
       }
     })
 
-robot.hear(/([0-9]|[0-9][0-9]):[0-5][0-9](a|p)m-([0-9]|[0-9][0-9]):[0-5][0-9](a|p)m/i, function(msg) {
+robot.hear(/[0-9][0-9]:[0-5][0-9]-[0-9][0-9]:[0-5][0-9]/i, function(msg) {
      if (awaitingWorkHours) {
 		console.log('in save', robot.brain.get(msg.message.user.id))
          robot.brain.set(msg.message.user.id, {busyCalUrl: robot.brain.get(msg.message.user.id).busyCalUrl, workHrs: msg.message.text})
