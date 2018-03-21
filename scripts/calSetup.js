@@ -51,50 +51,67 @@ const ical2json = require('ical2json')
   }
 
   class RecordAvailability {
+
 	constructor() {
-		this.lastEventEndTime = 'undefined'
-        	this.suggestions = []
+	  this.lastEventEndTime = 'undefined'
+          this.suggestions = []
  	}
 
 	set (wrkHrs, eventEnd, eventStart) {
-		console.log('set is running')
+	  console.log('set is running')
 
-		if (eventStart === undefined) { // event started before working hours
+	  if (eventStart === undefined) { // event started before working hours
 			this.lastEventEndTime = eventEnd
         	        return
-        	}
+          }
 
-		if (this.lastEventEndTime === 'undefined') {   // first event that day && there is gap time between wrkHrs start and eventStart
+	  if (this.lastEventEndTime === 'undefined') {   // first event that day && there is gap time between wrkHrs start and eventStart
                        this.lastEventEndTime = wrkHrs.start
-                }
+          }
 
 
-		this.createAvailSuggestions(wrkHrs, eventStart)
-		this.lastEventEndTime = eventEnd 
+	  this.findAvailSuggestions(wrkHrs, eventStart)
+	  this.lastEventEndTime = eventEnd 
         }
 
 	setUntilEndOfWorkDay(wrkHrs) {
-		this.createAvailSuggestions(wrkHrs, wrkHrs.end)
+	  this.findAvailSuggestions(wrkHrs, wrkHrs.end)
 	}
 
-	createAvailSuggestions(wrkHrs, eventStart) {
+	dayIsFree(wrkHrs, dateAvailRequested) {
+	  let randomEventStart = 0
+		console.log('day is free',wrkHrs)
 
-		let availTime =  moment.duration(eventStart.diff(this.lastEventEndTime))
+	//	  let wrkHrsPostParse = wrkHrsParse(wrkHrs, wrkHrs.timeZone)
 
-		availTime = availTime.asMinutes()
+	  for ( let i = 0 ; i < 3 ; i++) {
+	    createSuggestion(wrkHrsPostParse)
 
-       		 let suggestionStartPoint = this.lastEventEndTime
+	  }
 
+	}
 
-       		for (let i = 1; i <= (availTime / 60); i++) { // only create 60 min suggestions
+	findAvailSuggestions(wrkHrs, eventStart) {
 
-               		this.suggestions.push( {
-                        	start: `${wrkHrs.timeZone}: ${localTime(suggestionStartPoint, wrkHrs.timeZone)} UTC: ${suggestionStartPoint}`,
-                       		 end: `${wrkHrs.timeZone}: ${localTime(moment(suggestionStartPoint).add(1,'hours'),wrkHrs.timeZone)} UTC: ${moment(suggestionStartPoint).add(1,'hours')}`
-               		 })
-                  suggestionStartPoint = moment(suggestionStartPoint).add(1, 'hours')
+	   let availTime =  moment.duration(eventStart.diff(this.lastEventEndTime))
 
-          	 }
+	   availTime = availTime.asMinutes()
+
+       	   let suggestionStartPoint = this.lastEventEndTime
+
+       	   for (let i = 1; i <= (availTime / 60); i++) { // only create 60 min suggestions
+
+	     this.createSuggestion(wrkHrs, suggestionStartPoint, moment(suggestionStartPoint).add(1,'hours'))
+             suggestionStartPoint = moment(suggestionStartPoint).add(1, 'hours') //bump suggestionStartPoint an hour
+
+           }
+	}
+
+	createSuggestion(wrkHrs, suggestionStart, suggestionEnd) {
+	  this.suggestions.push({
+	    start: `${wrkHrs.timeZone}: ${localTime(suggestionStart, wrkHrs.timeZone)} UTC: ${suggestionStart}`,
+	    end: `${wrkHrs.timeZone}: ${localTime(suggestionEnd, wrkHrs.timeZone)} UTC: ${suggestionEnd}`
+	  })
 	}
 
 
@@ -139,10 +156,15 @@ const ical2json = require('ical2json')
 
 		}
 
-         } 
+         } else {
+	  console.log('this is in else when there are no events on that day')
+	 }
 
 	})
 	Availability.setUntilEndOfWorkDay(wrkHrs)
+
+	Availability.get().length ? '' : Availability.dayIsFree(wrkHrs, dateAvailRequested)
+	console.log('suggestion arr', Availability.get())
      }
   }
 
@@ -192,11 +214,9 @@ robot.hear(/[0-9][0-9]:[0-5][0-9]-[0-9][0-9]:[0-5][0-9]/i, function(msg) {
 	     timeZone : output.VCALENDAR[0]["X-WR-TIMEZONE"]
            }
 
-		let dayRequested = getTodaysDate()
+	   let dayRequested = getTodaysDate()
 
            msg.reply("Your current Timezone (set at fastmail.com): " + data.timeZone)
-
-	   // takes dates/day you want to find availability for && array of dates
 
 	   let wrkHrsInUTC =  wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone)
 
