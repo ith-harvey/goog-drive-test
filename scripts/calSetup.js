@@ -1,9 +1,12 @@
+
+
+// @doge calendar setup and calendar feature script
+
+
 const momentTZ = require('moment-timezone');
 const moment = require('moment');
 const rp = require('request-promise')
 const ical2json = require('ical2json')
-
-//cal setup script
 
 function getTodaysDate(currentTimeZone) {
   return moment.utc()
@@ -26,6 +29,7 @@ function localTime(time, timeZone) {
 }
 
 function wrkHrsParse(wrkHrs, timeZone) {
+
   let start = {
     Hrs: wrkHrs.slice(0,2),
     Min: wrkHrs.slice(3,5)
@@ -36,7 +40,13 @@ function wrkHrsParse(wrkHrs, timeZone) {
     Min: wrkHrs.slice(11,13)
   }
 
-  return {
+  let test = moment(wrkHrs.slice(0, wrkHrs.indexOf('-')),'HH:mm')
+  .tz(timeZone).hours(start.Hrs).minutes(start.Min)
+
+  console.log('in start test', test)
+  console.log('in start test2', moment.utc(test).format("YYYY-MM-DD HH:mm:ss"))
+
+  let returnObj = {
     start: moment(wrkHrs.slice(0, wrkHrs.indexOf('-')),'HH:mm')
     .tz(timeZone).hours(start.Hrs).minutes(start.Min).utc(),
 
@@ -45,11 +55,44 @@ function wrkHrsParse(wrkHrs, timeZone) {
 
     timeZone: timeZone
   }
-}
 
+  console.log('returnObj', returnObj)
+
+  return returnObj
+}
 
 function  minutesOfDay(m) {
   return m.minutes() + m.hours() * 60;
+}
+
+function randomEventStartTimes(wrkHrs, dateAvailRequested) {
+
+  function randomIntFromInterval(min, max) {
+    return Math.floor(Math.random()* ( max-min + 1) + min)
+  }
+
+  let startTime = {
+      Obj : {
+        randomIntFromInterval(wrkHrs.start.hour(),wrkHrs.end.hour()) : true
+      },
+      Arr : []
+  }
+
+
+  // startTime.Obj[randomIntFromInterval(wrkHrs.start.hour(),wrkHrs.end.hour())] = true
+
+  let currStartTime
+
+  while (startTime.Obj.keys().length < 2) {
+    currStartTime = randomIntFromInterval(wrkHrs.start.hour(),wrkHrs.end.hour())
+
+    if(!startTime.Obj[currStartTime]) {
+      startTime.Obj[currStartTime] = true
+      startTime.Arr.push(dateAvailRequested.hours(currStartTime))
+    }
+  }
+
+  return startTime.Arr
 }
 
 class RecordAvailability {
@@ -70,25 +113,24 @@ class RecordAvailability {
       // first event that day && there is gap time between wrkHrs start and eventStart
       this.lastEventEndTime = wrkHrs.start
     }
-	  this.findAvailSuggestions(wrkHrs, eventStart)
+
+	  this.findAvailability(wrkHrs, eventStart)
 	  this.lastEventEndTime = eventEnd
   }
 
 	setUntilEndOfWorkDay(wrkHrs) {
-	  this.findAvailSuggestions(wrkHrs, wrkHrs.end)
+	  this.findAvailability(wrkHrs, wrkHrs.end)
 	}
 
 	dayIsFree(wrkHrs, dateAvailRequested) {
-	  let randomEventStart = 0
-		console.log('day is free',wrkHrs)
-    // let wrkHrsPostParse = wrkHrsParse(wrkHrs, wrkHrs.timeZone)
 
-	  for ( let i = 0 ; i < 3 ; i++ ) {
-	    createSuggestion(wrkHrsPostParse)
-	  }
+	  randomEventStartTimes(wrkHrs,dateAvailRequested).forEach( startTime => {
+      this.createSuggestion(wrkHrs, )
+    })
+
 	}
 
-	findAvailSuggestions(wrkHrs, eventStart) {
+	findAvailability(wrkHrs, eventStart) {
     let availTime =  moment.duration(eventStart.diff(this.lastEventEndTime))
     availTime = availTime.asMinutes()
     let suggestionStartPoint = this.lastEventEndTime
@@ -98,7 +140,6 @@ class RecordAvailability {
       this.createSuggestion(wrkHrs, suggestionStartPoint, moment(suggestionStartPoint).add(1,'hours'))
 
       suggestionStartPoint = moment(suggestionStartPoint).add(1, 'hours') //bump suggestionStartPoint an hour
-
     }
 	}
 
@@ -118,10 +159,18 @@ class RecordAvailability {
 
 }
 
-//
-//
-//
-//
+/**
+   * findAvailabilityOverTime()
+   * @param {Array} eventArr - The event data retreived from fastmail.
+   * @param {Object} wrkHrs - Users prefered working hours & timezone
+   *    i.e: {start: XXXX, end: XXXX, timeZone: XXXX}
+   * @param {String} dateAvailRequested - the date the user has requested avail * on
+   * @param {String} timeWindow - time window that the user is requesting
+   *  i.e day / week
+   * @param {Class} Availability - instance of the RecordAvailability Class
+   *
+   * @returns Nothing - calls Availability.set() method
+**/
 
 function findAvailabilityOverTime (eventArr, wrkHrs, dateAvailRequested, timeWindow, Availability) {
 
@@ -173,7 +222,6 @@ module.exports = (robot) => {
 
   let awaitingUrl = false, awaitingWorkHours = false, calSetupDone = false
 
-
   robot.respond(/(cal setup)/i, function(msg) {
     msg.reply("Woof woof! Welcome to the cal setup wizard. \n \n Please enter your fastmail account’s free/busy calendar URL so I can share your availability upon request.\n\n (To access your free/busy calendar URL visit www.fastmail.com/calendar/ while logged in.\n Select the calendar dropdown > settings > calendars > Edit&share > check free/busy information > copy the url > hit save up top > paste URL in chat and hit enter)")
 
@@ -200,7 +248,6 @@ module.exports = (robot) => {
         workHrs: msg.message.text
       })
 
-      console.log('in save', robot.brain.get(msg.message.user.id))
 
       msg.reply("Woof woof! Thank you for completing the cal setup wizard!, you may now use the `@doge cal suggest` feature.")
 
@@ -211,6 +258,7 @@ module.exports = (robot) => {
 
 
   robot.respond(/(cal suggest)/i ,function(msg) {
+
     //if (!calSetupDone) {
     //msg.reply("Woof woof! To use the `@doge cal suggest` feature you must first go through the setup wizard. Do so by typing the command `@doge cal setup`.")
     //} else {
