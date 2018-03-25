@@ -56,9 +56,11 @@ function wrkHrsParse(wrkHrs, timeZone) {
   return returnObj
 }
 
+
 function  minutesOfDay(m) {
   return m.minutes() + m.hours() * 60;
 }
+
 
 function randomStartTimesArray(wrkHrs, dateAvailRequested) {
 
@@ -83,17 +85,15 @@ function randomStartTimesArray(wrkHrs, dateAvailRequested) {
     currStartTime = randomIntFromInterval(wrkHrs.start.hour(),wrkHrs.end.hour())
 
     if (!startTime.Obj[currStartTime]) {
-      console.log('start time doesnt exist', currStartTime)
       startTime.Obj[currStartTime] = true
       startTime.Arr.push(moment(dateAvailRequested).hours(currStartTime).minutes(00).seconds(00))
     }
 
   }
-  console.log('startTimeObj', startTime.Obj)
-  console.log('startTimeArr', startTime.Arr)
 
   return startTime.Arr
 }
+
 
 class RecordAvailability {
 
@@ -124,9 +124,8 @@ class RecordAvailability {
 
 	dayIsFree(wrkHrs, dateAvailRequested) {
     let endTime
-    let startTimesArr = randomStartTimesArray(wrkHrs, dateAvailRequested)
-    console.log('startTimeArr', startTimesArr)
-	  startTimesArr.forEach( startTime => {
+
+	  randomStartTimesArray(wrkHrs, dateAvailRequested).forEach( startTime => {
       endTime = moment(startTime).add(1,'hours')
       this.createSuggestion(wrkHrs, startTime, endTime)
     })
