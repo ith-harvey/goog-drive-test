@@ -43,9 +43,6 @@ function wrkHrsParse(wrkHrs, timeZone) {
   let test = moment(wrkHrs.slice(0, wrkHrs.indexOf('-')),'HH:mm')
   .tz(timeZone).hours(start.Hrs).minutes(start.Min)
 
-  console.log('in start test', test)
-  console.log('in start test2', moment.utc(test).format("YYYY-MM-DD HH:mm:ss"))
-
   let returnObj = {
     start: moment(wrkHrs.slice(0, wrkHrs.indexOf('-')),'HH:mm')
     .tz(timeZone).hours(start.Hrs).minutes(start.Min).utc(),
@@ -56,8 +53,6 @@ function wrkHrsParse(wrkHrs, timeZone) {
     timeZone: timeZone
   }
 
-  console.log('returnObj', returnObj)
-
   return returnObj
 }
 
@@ -65,32 +60,37 @@ function  minutesOfDay(m) {
   return m.minutes() + m.hours() * 60;
 }
 
-function randomEventStartTimes(wrkHrs, dateAvailRequested) {
+function randomStartTimesArray(wrkHrs, dateAvailRequested) {
 
   function randomIntFromInterval(min, max) {
     return Math.floor(Math.random()* ( max-min + 1) + min)
   }
 
   let startTime = {
-      Obj : {
-        randomIntFromInterval(wrkHrs.start.hour(),wrkHrs.end.hour()) : true
-      },
+      Obj : {},
       Arr : []
   }
 
+  let stagingStartTime = randomIntFromInterval(wrkHrs.start.hour(),wrkHrs.end.hour())
 
-  // startTime.Obj[randomIntFromInterval(wrkHrs.start.hour(),wrkHrs.end.hour())] = true
+  startTime.Obj[stagingStartTime] = true
+  startTime.Arr.push(moment(dateAvailRequested).hours(stagingStartTime).minutes(00).seconds(00))
 
   let currStartTime
 
-  while (startTime.Obj.keys().length < 2) {
+  while (Object.keys(startTime.Obj).length <= 2) {
+
     currStartTime = randomIntFromInterval(wrkHrs.start.hour(),wrkHrs.end.hour())
 
-    if(!startTime.Obj[currStartTime]) {
+    if (!startTime.Obj[currStartTime]) {
+      console.log('start time doesnt exist', currStartTime)
       startTime.Obj[currStartTime] = true
-      startTime.Arr.push(dateAvailRequested.hours(currStartTime))
+      startTime.Arr.push(moment(dateAvailRequested).hours(currStartTime).minutes(00).seconds(00))
     }
+
   }
+  console.log('startTimeObj', startTime.Obj)
+  console.log('startTimeArr', startTime.Arr)
 
   return startTime.Arr
 }
@@ -123,9 +123,12 @@ class RecordAvailability {
 	}
 
 	dayIsFree(wrkHrs, dateAvailRequested) {
-
-	  randomEventStartTimes(wrkHrs,dateAvailRequested).forEach( startTime => {
-      this.createSuggestion(wrkHrs, )
+    let endTime
+    let startTimesArr = randomStartTimesArray(wrkHrs, dateAvailRequested)
+    console.log('startTimeArr', startTimesArr)
+	  startTimesArr.forEach( startTime => {
+      endTime = moment(startTime).add(1,'hours')
+      this.createSuggestion(wrkHrs, startTime, endTime)
     })
 
 	}
