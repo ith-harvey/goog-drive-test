@@ -2,6 +2,23 @@
 
 // @doge calendar setup and calendar feature script
 
+/* First things first set your environment variables:
+* export ROCKETCHAT_ROOM=''
+* export LISTEN_ON_ALL_PUBLIC=true
+* export ROCKETCHAT_USER=doge
+* export ROCKETCHAT_PASSWORD=doge
+* export ROCKETCHAT_URL=159.65.101.16:3000
+* export NODE_VERSION=default
+*
+* To setup doge run:
+* @doge cal setup - and follow the remaining prompts
+*
+* Once @doge is setup run:
+* @doge cal suggest - receive 3 meeting suggestions for the current day
+*
+* 
+*/
+
 
 const momentTZ = require('moment-timezone');
 const moment = require('moment');
