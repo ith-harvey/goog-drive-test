@@ -25,9 +25,8 @@ const moment = require('moment');
 const rp = require('request-promise')
 const ical2json = require('ical2json')
 
-function getTodaysDate(currentTimeZone) {
-  return moment.utc()
-}
+const getTodaysDate = currentTimeZone => moment.utc()
+const minutesOfDay = m => m.minutes() + m.hours() * 60;
 
 function formatDate(icalStr) {
   let strYear = icalStr.substr(0,4);
@@ -43,6 +42,24 @@ function formatDate(icalStr) {
 function localTime(time, timeZone) {
   let timeClone = moment(time)
   return timeClone.tz(timeZone).format("DD-MM-YYYY hh:mm:ss")
+}
+
+function checkIfUserIsSetup(robot, userId) {
+  // input validation function
+
+  if (robot.brain.get(userId) === null) {
+    console.log('user has not started the setup process.')
+    return true
+
+  } else if (robot.brain.get(userId).busyCalUrl === undefined) {
+    console.log('user has not provided a URL.')
+    return true
+
+  } else if (robot.brain.get(userId).workHrs === undefined) {
+    console.log('user has not provided working hours.')
+    return true
+  }
+  return false // user is good to use cal suggest feature
 }
 
 function wrkHrsParse(wrkHrs, timeZone) {
@@ -72,12 +89,6 @@ function wrkHrsParse(wrkHrs, timeZone) {
 
   return returnObj
 }
-
-
-function  minutesOfDay(m) {
-  return m.minutes() + m.hours() * 60;
-}
-
 
 function randomStartTimesArray(availBlockStarts,availBlockEnds, dateAvailRequested) {
 
@@ -244,7 +255,6 @@ module.exports = (robot) => {
 
   robot.respond(/(cal setup)/i, function(msg) {
     msg.reply("Woof woof! Welcome to the cal setup wizard. \n \n Please enter your fastmail account’s free/busy calendar URL so I can share your availability upon request.\n\n (To access your free/busy calendar URL visit www.fastmail.com/calendar/ while logged in.\n Select the calendar dropdown > settings > calendars > Edit&share > check free/busy information > copy the url > hit save up top > paste URL in chat and hit enter)")
-
     awaitingUrl = true
   })
 
@@ -279,46 +289,46 @@ module.exports = (robot) => {
 
   robot.respond(/(cal suggest)/i ,function(msg) {
 
-    //if (!calSetupDone) {
-    //msg.reply("Woof woof! To use the `@doge cal suggest` feature you must first go through the setup wizard. Do so by typing the command `@doge cal setup`.")
-    //} else {
+    if (checkIfUserIsSetup(robot, msg.message.user.id)) {
+    msg.reply("Woof woof! To use the `@doge cal suggest` feature you must first go through the setup wizard. Do so by typing the command `@doge cal setup`.")
+    } else {
 
-    rp(robot.brain.get(msg.message.user.id).busyCalUrl)
-    .then((response)=> {
+      rp(robot.brain.get(msg.message.user.id).busyCalUrl)
+      .then((response)=> {
 
-      let output = ical2json.convert(response);
+        let output = ical2json.convert(response);
 
-      let data = {
-        dateArr : output.VCALENDAR[0].VEVENT,
-        timeZone : output.VCALENDAR[0]["X-WR-TIMEZONE"]
-      }
+        let data = {
+          dateArr : output.VCALENDAR[0].VEVENT,
+          timeZone : output.VCALENDAR[0]["X-WR-TIMEZONE"]
+        }
 
-      let dayRequested = getTodaysDate()
-      let timeWindow = 'day'
-      // let timeWindow = 'week'
+        let dayRequested = getTodaysDate()
+        let timeWindow = 'day'
+        // let timeWindow = 'week'
 
-      msg.reply("Your current Timezone (set at fastmail.com): " + data.timeZone)
+        msg.reply("Your current Timezone (set at fastmail.com): " + data.timeZone)
 
-      let wrkHrsInUTC =  wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone)
+        let wrkHrsInUTC =  wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone)
 
-      let Availability = new RecordAvailability()
+        let Availability = new RecordAvailability()
 
-      findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, dayRequested, timeWindow, Availability)
+        findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, dayRequested, timeWindow, Availability)
 
-      let suggestString = ''
+        let suggestString = ''
 
-      Availability.get().forEach((suggestion, index) => {
-        suggestString += `${index+1}) ${suggestion.start} \n ${suggestion.end} \n \n`
+        Availability.get().forEach((suggestion, index) => {
+          suggestString += `${index+1}) ${suggestion.start} \n ${suggestion.end} \n \n`
+        })
+
+        msg.reply(`Woof woof! Here are some meeting suggestions for ${dayRequested.format('LL')}:  \n \n` + suggestString)
+
+      }).catch((err)=> {
+        msg.reply("in err")
+        console.log('ERROR: ',err)
+        msg.reply(err)
       })
-
-      msg.reply(`Woof woof! Here are some meeting suggestions for ${dayRequested.format('LL')}:  \n \n` + suggestString)
-
-    }).catch((err)=> {
-      msg.reply("in err")
-      console.log('ERROR: ',err)
-      msg.reply(err)
-    })
-  //}
+    }
   })
 
 }
