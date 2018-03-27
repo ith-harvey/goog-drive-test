@@ -2,9 +2,10 @@
 
 // @doge calendar setup and calendar feature script
 
-/* First things first set your environment variables:
+/* First things first set your environment variables in the root folder:
 * export ROCKETCHAT_ROOM=''
 * export LISTEN_ON_ALL_PUBLIC=true
+* export RESPOND_TO_DM=true
 * export ROCKETCHAT_USER=doge
 * export ROCKETCHAT_PASSWORD=doge
 * export ROCKETCHAT_URL=159.65.101.16:3000
@@ -16,7 +17,6 @@
 * Once @doge is setup run:
 * @doge cal suggest - receive 3 meeting suggestions for the current day
 *
-* 
 */
 
 
@@ -79,7 +79,7 @@ function  minutesOfDay(m) {
 }
 
 
-function randomStartTimesArray(wrkHrs, dateAvailRequested) {
+function randomStartTimesArray(availBlockStarts,availBlockEnds, dateAvailRequested) {
 
   function randomIntFromInterval(min, max) {
     return Math.floor(Math.random()* ( max-min + 1) + min)
@@ -90,7 +90,7 @@ function randomStartTimesArray(wrkHrs, dateAvailRequested) {
       Arr : []
   }
 
-  let stagingStartTime = randomIntFromInterval(wrkHrs.start.hour(),wrkHrs.end.hour())
+  let stagingStartTime = randomIntFromInterval(availBlockStarts, availBlockEnds)
 
   startTime.Obj[stagingStartTime] = true
   startTime.Arr.push(moment(dateAvailRequested).hours(stagingStartTime).minutes(00).seconds(00))
@@ -99,7 +99,7 @@ function randomStartTimesArray(wrkHrs, dateAvailRequested) {
 
   while (Object.keys(startTime.Obj).length <= 2) {
 
-    currStartTime = randomIntFromInterval(wrkHrs.start.hour(),wrkHrs.end.hour())
+    currStartTime = randomIntFromInterval(availBlockStarts, availBlockEnds)
 
     if (!startTime.Obj[currStartTime]) {
       startTime.Obj[currStartTime] = true
@@ -107,7 +107,6 @@ function randomStartTimesArray(wrkHrs, dateAvailRequested) {
     }
 
   }
-
   return startTime.Arr
 }
 
@@ -142,7 +141,7 @@ class RecordAvailability {
 	dayIsFree(wrkHrs, dateAvailRequested) {
     let endTime
 
-	  randomStartTimesArray(wrkHrs, dateAvailRequested).forEach( startTime => {
+	  randomStartTimesArray(wrkHrs.start.hour(),wrkHrs.end.hour(), dateAvailRequested).forEach( startTime => {
       endTime = moment(startTime).add(1,'hours')
       this.createSuggestion(wrkHrs, startTime, endTime)
     })
@@ -154,7 +153,8 @@ class RecordAvailability {
     availTime = availTime.asMinutes()
     let suggestionStartPoint = this.lastEventEndTime
 
-    for (let i = 1; i <= (availTime / 60); i++) { // only create 60 min suggestions
+    for (let i = 1; i <= (availTime / 60); i++) {
+      // only create 60 min suggestions
 
       this.createSuggestion(wrkHrs, suggestionStartPoint, moment(suggestionStartPoint).add(1,'hours'))
 
@@ -198,6 +198,7 @@ function findAvailabilityOverTime (eventArr, wrkHrs, dateAvailRequested, timeWin
 
       if (formatDate(date.DTSTART).date() === dateAvailRequested.date()) {
       // events that happen on selected day
+      console.log('same day!', formatDate(date.DTSTART))
 
         if (minutesOfDay(formatDate(date.DTSTART)) <= minutesOfDay(wrkHrs.start)) {
         // event start happens before || same time as wrkhrs start
@@ -224,7 +225,7 @@ function findAvailabilityOverTime (eventArr, wrkHrs, dateAvailRequested, timeWin
 
     		}
       } else {
-    	  console.log('this is in else when there are no events on that day')
+    	  console.log('Do nothing event doesnt match day requested')
     	 }
 
     })
@@ -293,6 +294,8 @@ module.exports = (robot) => {
       }
 
       let dayRequested = getTodaysDate()
+      let timeWindow = 'day'
+      // let timeWindow = 'week'
 
       msg.reply("Your current Timezone (set at fastmail.com): " + data.timeZone)
 
@@ -300,13 +303,12 @@ module.exports = (robot) => {
 
       let Availability = new RecordAvailability()
 
-      findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, dayRequested, 'day', Availability)
+      findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, dayRequested, timeWindow, Availability)
 
       let suggestString = ''
 
       Availability.get().forEach((suggestion, index) => {
         suggestString += `${index+1}) ${suggestion.start} \n ${suggestion.end} \n \n`
-
       })
 
       msg.reply(`Woof woof! Here are some meeting suggestions for ${dayRequested.format('LL')}:  \n \n` + suggestString)
