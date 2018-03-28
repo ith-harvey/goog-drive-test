@@ -28,15 +28,18 @@ const ical2json = require('ical2json')
 const getTodaysDate = currentTimeZone => moment.utc()
 const minutesOfDay = m => m.minutes() + m.hours() * 60;
 
-function formatDate(icalStr) {
+function formatDate(timeZone, icalStr) {
   let strYear = icalStr.substr(0, 4);
-  let strMonth = parseInt(icalStr.substr(4, 2), 10) - 1;
+  let strMonth = parseInt(icalStr.substr(4, 2), 10) - 2;
   let strDay = icalStr.substr(6, 2);
   let strHour = icalStr.substr(9, 2);
   let strMin = icalStr.substr(11, 2);
   let strSec = icalStr.substr(13, 2);
+  strMonth += 1
   let dateNeedsFormat = new Date(strYear, strMonth, strDay, strHour, strMin, strSec)
-  return moment(dateNeedsFormat, 'YYYY-MM-DD HH:mm:ss Z')
+
+  return moment.utc(dateNeedsFormat, 'YYYY-MM-DD HH:mm:ss Z').month(strMonth).date(strDay).hours(strHour).minutes(strMin).seconds(strSec)
+
 }
 
 function localTime(time, timeZone) {
@@ -130,6 +133,7 @@ class RecordAvailability {
 
   set(wrkHrs, eventEnd, eventStart) {
     if (eventStart === undefined) { //event started before working hours
+      console.log('settting event end')
       this.lastEventEndTime = eventEnd
       return
     }
@@ -138,7 +142,6 @@ class RecordAvailability {
       // first event that day && there is gap time between wrkHrs start and eventStart
       this.lastEventEndTime = wrkHrs.start
     }
-
     this.findAvailability(wrkHrs, eventStart)
     this.lastEventEndTime = eventEnd
   }
@@ -165,8 +168,9 @@ class RecordAvailability {
   }
 
   findAvailability(wrkHrs, eventStart) {
-    let availTime =  moment.duration(eventStart.diff(this.lastEventEndTime))
-    availTime = availTime.asMinutes()
+
+    let availTime =  moment.duration(eventStart.diff(this.lastEventEndTime)).asMinutes()
+
     let availabilityStartPoint = this.lastEventEndTime
 
     for (let i = 1; i <= (availTime / 60); i++) {
@@ -176,6 +180,13 @@ class RecordAvailability {
 
       availabilityStartPoint = moment(availabilityStartPoint).add(1, 'hours') //bump suggestionStartPoint an hour
     }
+  }
+
+  wholeDayIsBooked(wrkHrs) {
+    this.availabilityArr.push({
+      booked: wrkHrs.start,
+      bookedMsg: 'day is completely booked',
+    })
   }
 
   addAvailability(wrkHrs, availStart, availEnd) {
@@ -215,39 +226,45 @@ class RecordAvailability {
 *
 */
 
-let findAvailabilityOverTime = function (eventArr, wrkHrs, dateAvailRequested, timeWindow, Availability) {
+const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested, timeWindow, Availability) => {
 
   return new Promise((resolve, reject) => {
     let i = 0
-    let date = eventArr[i]
+    let currEvent = eventArr[i]
+    let eventStart = formatDate(wrkHrs.timeZone, currEvent.DTSTART)
+    let eventEnd = formatDate(wrkHrs.timeZone, currEvent.DTEND)
 
-    while (formatDate(date.DTSTART).date() <= dateAvailRequested.date()) {
-      // console.log('in find avail eventdate', formatDate(date.DTSTART))
-      // console.log('in find avail requestdate', dateAvailRequested)
+    while (eventStart.date() <= dateAvailRequested.date()) {
+      // console.log('same day! rquest', dateAvailRequested)
+      // console.log('same day! start', eventStart)
+      // console.log('same day! end', eventEnd)
 
-      if (formatDate(date.DTSTART).date() === dateAvailRequested.date()) {
+
+      if (eventStart.date() === dateAvailRequested.date()) {
         // events that happen on selected day
-        // console.log('same day!', formatDate(date.DTSTART))
 
-        if (minutesOfDay(formatDate(date.DTSTART)) <= minutesOfDay(wrkHrs.start)) {
+        if (minutesOfDay(eventStart) <= minutesOfDay(wrkHrs.start)) {
           // event start happens before || same time as wrkhrs start
 
-          if (minutesOfDay(formatDate(date.DTEND)) <= minutesOfDay(wrkHrs.start)) {
+          if (minutesOfDay(eventEnd) <= minutesOfDay(wrkHrs.start)) {
             // event end happens before || same time as wrkhrs start
             // the entire event happens before working hours
             // do nothing -> go to next event
+          } else if (minutesOfDay(eventEnd) >= minutesOfDay(wrkHrs.end)) {
+            // event books out the entire day!
+            Availability.wholeDayIsBooked(wrkHrs)
           } else {
             //event ends during working hours
-            Availability.set(wrkHrs, formatDate(date.DTEND))
+            Availability.set(wrkHrs, eventEnd)
           }
 
         } else { // event start happens after wrkhrs start
 
-          if (minutesOfDay(formatDate(date.DTSTART)) > minutesOfDay(wrkHrs.end)) {
-            // event start happens before  wrkhrs end
-            Availability.set(wrkHrs, formatDate(date.DTEND), formatDate(date.DTSTART))
+          if (minutesOfDay(eventStart) < minutesOfDay(wrkHrs.end)) {
 
-            // 2 Args (record whole chunk of availability from start || last event end - end)
+            // event start happens during work hours
+            Availability.set(wrkHrs, eventEnd, eventStart)
+
           } else {
             // the entire event happens after working hours
             // do nothing -> go to next event
@@ -261,14 +278,16 @@ let findAvailabilityOverTime = function (eventArr, wrkHrs, dateAvailRequested, t
       if (eventArr.length - 1 === i) break
 
       i++
-      date = eventArr[i]
+      currEvent = eventArr[i]
+      eventStart = formatDate(wrkHrs.timeZone, currEvent.DTSTART)
+      eventEnd = formatDate(wrkHrs.timeZone, currEvent.DTEND)
     }
 
     Availability.setUntilEndOfWorkDay(wrkHrs)
 
     Availability.get().length ? '' : Availability.dayIsFreeAddAvail(wrkHrs, dateAvailRequested)
 
-    return Availability.get()
+    resolve(Availability.get())
   })
 }
 
@@ -334,20 +353,24 @@ module.exports = (robot) => {
 
         let Availability = new RecordAvailability()
 
-        findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, dayRequested, timeWindow, Availability)
+        findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, dayRequested, timeWindow, Availability).then(availabilityArr => {
 
-        let suggestString = ''
+          if (availabilityArr[0].booked) {
+            msg.reply('Woof woof! Unfortunatley it looks like your day is fully booked. Try running `@doge cal suggest week` to check your availability for the week.')
+            return
+          }
 
-        Availability.get().forEach((suggestion, index) => {
-          suggestString += `${index + 1}) ${suggestion.start}
- ${suggestion.end}
+          let suggestString = ''
+          availabilityArr.forEach((suggestion, index) => {
+            suggestString += `${index + 1}) ${suggestion.start}
+            ${suggestion.end}\n \n`
+          })
 
-`
+          msg.reply(`Woof woof! Here are some meeting suggestions for ${dayRequested.format('LL')}: \n \n` + suggestString)
+
+        }).catch(err => {
+          console.log('err', err)
         })
-
-        msg.reply(`Woof woof! Here are some meeting suggestions for ${dayRequested.format('LL')}:
-
-` + suggestString)
 
       }).catch((err)=> {
         msg.reply('in err')
