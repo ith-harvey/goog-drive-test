@@ -47,6 +47,8 @@ function localTime(time, timeZone) {
   return timeClone.tz(timeZone).format('DD-MM-YYYY hh:mm:ss')
 }
 
+
+
 function checkIfUserIsSetup(robot, userId) {
   // input validation function
 
@@ -66,7 +68,108 @@ function checkIfUserIsSetup(robot, userId) {
   return false // user is already setup for cal suggest feature
 }
 
-function wrkHrsParse(wrkHrs, timeZone) {
+function buildEventWeek(dayProvided) {
+  let startOfWorkWeek = moment(dayProvided).startOf('isoWeek');
+  let endOfWorkWeek = moment(dayProvided).endOf('isoWeek').subtract(2, 'days')
+
+  let daysToCheckAvailability = [];
+  let day = startOfWorkWeek;
+  while (day <= endOfWorkWeek) {
+    if (day.date() >= getTodaysDate().date()) {
+      // console.log('pushing', day.toDate())
+      // console.log('pushing', moment.utc(day.toDate()))
+      daysToCheckAvailability.push(moment.utc(day.toDate()));
+    }
+      day = day.clone().add(1, 'd');
+  }
+  return daysToCheckAvailability
+}
+
+function setScopeOfWorkWeek(dayProvided) {
+  if (1 <= dayProvided.isoWeekday() && dayProvided.isoWeekday() <= 5 ) {
+
+    return buildEventWeek(dayProvided)
+
+  } else if (6 === dayProvided.isoWeekday() || dayProvided.isoWeekday() === 7) {
+
+    // What we should do for weekends when this query is run??
+
+    // return buildEventWeek(dayProvided)
+  }
+}
+
+class IncomingCommand {
+  constructor() {
+    this.timeFrameRequested = ''
+  }
+
+  interpreter (cmdArr) {
+    let DelegatorObject = new Delegator
+    let i = cmdArr.indexOf('suggest')
+    let regExp = /(may|february|january|august|september|october|november|december|march|april|july|june)/
+    let monthQuery = regExp.test(cmdArr[i+1])
+
+    if (cmdArr.length - 1 === i) {
+      DelegatorObject.add('datesRequested', getTodaysDate())
+      this.setRequestedQuery(`today, ${getTodaysDate().format('LL')}`)
+      return DelegatorObject.get()// just basic query
+    }
+
+    if (cmdArr[i+1][0] === '@') {
+      console.log('adding users to query')
+    }
+
+    if (cmdArr[i+1] === 'week') {
+      console.log('week query')
+      let weeksWorkingDaysArr = setScopeOfWorkWeek(getTodaysDate())
+      this.setRequestedQuery('this week')
+
+      DelegatorObject.add('datesRequested', weeksWorkingDaysArr)
+
+      return DelegatorObject.get()
+    }
+
+    if (monthQuery) {
+      return 'specificDayQuery'
+      console.log('specific month/day query')
+    }
+
+    return DelegatorObject.get()
+  }
+
+  setRequestedQuery(msg) {
+    this.timeFrameRequested = msg
+  }
+
+  getRequestedQuery(msg) {
+    return this.timeFrameRequested
+  }
+
+}
+
+class Delegator {
+  constructor() {
+    this.delegatorObj = {
+      calGuests: [],
+      datesRequested: [],
+    }
+  }
+
+  add (addTo, whatWeAdd) {
+    if (Array.isArray(whatWeAdd)) {
+      this.delegatorObj[addTo] = whatWeAdd
+    } else {
+      this.delegatorObj[addTo].push(whatWeAdd)
+    }
+  }
+
+  get() { return this.delegatorObj}
+
+}
+
+
+
+function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
 
   let start = {
     Hrs: wrkHrs.slice(0, 2),
@@ -77,9 +180,6 @@ function wrkHrsParse(wrkHrs, timeZone) {
     Hrs: wrkHrs.slice(8, 10),
     Min: wrkHrs.slice(11, 13),
   }
-
-  let test = moment(wrkHrs.slice(0, wrkHrs.indexOf('-')), 'HH:mm')
-  .tz(timeZone).hours(start.Hrs).minutes(start.Min)
 
   let returnObj = {
     start: moment(wrkHrs.slice(0, wrkHrs.indexOf('-')), 'HH:mm')
@@ -92,6 +192,26 @@ function wrkHrsParse(wrkHrs, timeZone) {
   }
 
   return returnObj
+}
+
+function chngWrkHrsToDateRequested(wrkHrs, dateAvailRequested) {
+  console.log('dateAvail', dateAvailRequested)
+
+  console.log('updated to date Avail!!', {
+      start: moment.utc(dateAvailRequested).hours(wrkHrs.start.hours())
+      .minutes(wrkHrs.start.minutes()),
+
+      end: moment.utc(dateAvailRequested).hours(wrkHrs.end.hours())
+      .minutes(wrkHrs.end.minutes()),
+    })
+
+  return {
+    start: moment.utc(dateAvailRequested).hours(wrkHrs.start.hours())
+    .minutes(wrkHrs.start.minutes()),
+
+    end: moment.utc(dateAvailRequested).hours(wrkHrs.end.hours())
+    .minutes(wrkHrs.end.minutes()),
+  }
 }
 
 function randomStartTimesArray(availBlockStarts, availBlockEnds, dateAvailRequested) {
@@ -151,7 +271,9 @@ class RecordAvailability {
   }
 
   dayIsFreeAddAvail(wrkHrs, dateAvailRequested) {
-    this.addAvailability(wrkHrs, wrkHrs.start, wrkHrs.end)
+    let dateRequestedWrkHrs = chngWrkHrsToDateRequested(wrkHrs, dateAvailRequested)
+
+    this.addAvailability(wrkHrs, dateRequestedWrkHrs.start, dateRequestedWrkHrs.end)
   }
 
   generateSuggestTimes(wrkHrs, dateAvailRequested) {
@@ -196,12 +318,12 @@ class RecordAvailability {
 
       end: `${wrkHrs.timeZone}: ${localTime(availEnd, wrkHrs.timeZone)} UTC: ${availEnd}`,
 
+      rawStartTime: localTime(availStart, wrkHrs.timeZone),
+
     })
   }
 
-  get() {
-    return this.availabilityArr
-  }
+  get() { return this.availabilityArr}
 
 }
 
@@ -211,8 +333,6 @@ class RecordAvailability {
    * @param {Object} wrkHrs - Users prefered working hours & timezone
    *    i.e: {start: XXXX, end: XXXX, timeZone: XXXX}
    * @param {String} dateAvailRequested - the date the user has requested avail * on
-   * @param {String} timeWindow - time window that the user is requesting
-   *  i.e day / week
    * @param {Class} Availability - instance of the RecordAvailability Class
    *
    * @returns Nothing - calls Availability.set() method
@@ -226,69 +346,66 @@ class RecordAvailability {
 *
 */
 
-const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested, timeWindow, Availability) => {
+const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested,  Availability) => {
+  let i = 0
+  let currEvent = eventArr[i]
+  let eventStart = formatDate(wrkHrs.timeZone, currEvent.DTSTART)
+  let eventEnd = formatDate(wrkHrs.timeZone, currEvent.DTEND)
 
-  return new Promise((resolve, reject) => {
-    let i = 0
-    let currEvent = eventArr[i]
-    let eventStart = formatDate(wrkHrs.timeZone, currEvent.DTSTART)
-    let eventEnd = formatDate(wrkHrs.timeZone, currEvent.DTEND)
-
-    while (eventStart.date() <= dateAvailRequested.date()) {
-      // console.log('same day! rquest', dateAvailRequested)
-      // console.log('same day! start', eventStart)
-      // console.log('same day! end', eventEnd)
+  while (eventStart.date() <= dateAvailRequested.date()) {
+    // console.log('same day! rquest', dateAvailRequested)
+    // console.log('same day! start', eventStart)
+    // console.log('same day! end', eventEnd)
 
 
-      if (eventStart.date() === dateAvailRequested.date()) {
-        // events that happen on selected day
+    if (eventStart.date() === dateAvailRequested.date()) {
+      // events that happen on selected day
 
-        if (minutesOfDay(eventStart) <= minutesOfDay(wrkHrs.start)) {
-          // event start happens before || same time as wrkhrs start
+      if (minutesOfDay(eventStart) <= minutesOfDay(wrkHrs.start)) {
+        // event start happens before || same time as wrkhrs start
 
-          if (minutesOfDay(eventEnd) <= minutesOfDay(wrkHrs.start)) {
-            // event end happens before || same time as wrkhrs start
-            // the entire event happens before working hours
-            // do nothing -> go to next event
-          } else if (minutesOfDay(eventEnd) >= minutesOfDay(wrkHrs.end)) {
-            // event books out the entire day!
-            Availability.wholeDayIsBooked(wrkHrs)
-          } else {
-            //event ends during working hours
-            Availability.set(wrkHrs, eventEnd)
-          }
-
-        } else { // event start happens after wrkhrs start
-
-          if (minutesOfDay(eventStart) < minutesOfDay(wrkHrs.end)) {
-
-            // event start happens during work hours
-            Availability.set(wrkHrs, eventEnd, eventStart)
-
-          } else {
-            // the entire event happens after working hours
-            // do nothing -> go to next event
-          }
-
+        if (minutesOfDay(eventEnd) <= minutesOfDay(wrkHrs.start)) {
+          // event end happens before || same time as wrkhrs start
+          // the entire event happens before working hours
+          // do nothing -> go to next event
+        } else if (minutesOfDay(eventEnd) >= minutesOfDay(wrkHrs.end)) {
+          // event books out the entire day!
+          Availability.wholeDayIsBooked(wrkHrs)
+        } else {
+          //event ends during working hours
+          Availability.set(wrkHrs, eventEnd)
         }
-      } else {
-        // console.log('Do nothing event doesnt match day requested')
+
+      } else { // event start happens after wrkhrs start
+
+        if (minutesOfDay(eventStart) < minutesOfDay(wrkHrs.end)) {
+
+          // event start happens during work hours
+          Availability.set(wrkHrs, eventEnd, eventStart)
+
+        } else {
+          // the entire event happens after working hours
+          // do nothing -> go to next event
+        }
+
       }
-
-      if (eventArr.length - 1 === i) break
-
-      i++
-      currEvent = eventArr[i]
-      eventStart = formatDate(wrkHrs.timeZone, currEvent.DTSTART)
-      eventEnd = formatDate(wrkHrs.timeZone, currEvent.DTEND)
+    } else {
+      // console.log('Do nothing event doesnt match day requested')
     }
 
-    Availability.setUntilEndOfWorkDay(wrkHrs)
+    if (eventArr.length - 1 === i) break
 
-    Availability.get().length ? '' : Availability.dayIsFreeAddAvail(wrkHrs, dateAvailRequested)
+    i++
+    currEvent = eventArr[i]
+    eventStart = formatDate(wrkHrs.timeZone, currEvent.DTSTART)
+    eventEnd = formatDate(wrkHrs.timeZone, currEvent.DTEND)
+  }
 
-    resolve(Availability.get())
-  })
+  Availability.setUntilEndOfWorkDay(wrkHrs)
+
+  Availability.get().length ? '' : Availability.dayIsFreeAddAvail(wrkHrs, dateAvailRequested)
+
+  return Availability.get()
 }
 
 module.exports = (robot) => {
@@ -333,6 +450,10 @@ module.exports = (robot) => {
       msg.reply('Woof woof! To use the `@doge cal suggest` feature you must first go through the setup wizard. Do so by typing the command `@doge cal setup`.')
     } else {
 
+      let Command = new IncomingCommand
+
+      let delegatorObj = Command.interpreter(msg.message.text.split(' '))
+
       rp(robot.brain.get(msg.message.user.id).busyCalUrl)
       .then((response)=> {
 
@@ -343,30 +464,53 @@ module.exports = (robot) => {
           timeZone: output.VCALENDAR[0]['X-WR-TIMEZONE'],
         }
 
-        let dayRequested = getTodaysDate()
-        let timeWindow = 'day'
-        // let timeWindow = 'week'
-
         msg.reply('Your current Timezone (set at fastmail.com): ' + data.timeZone)
-
-        let wrkHrsInUTC =  wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone)
 
         let Availability = new RecordAvailability()
 
-        findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, dayRequested, timeWindow, Availability).then(availabilityArr => {
+        let wrkHrsInUTC = wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone)
 
-          if (availabilityArr[0].booked) {
-            msg.reply('Woof woof! Unfortunatley it looks like your day is fully booked. Try running `@doge cal suggest week` to check your availability for the week.')
-            return
-          }
+        let findAvailPromiseArr = [ new Promise((resolve, reject) => {
+              resolve(findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, delegatorObj.datesRequested[0], Availability))
+          })]
+
+        if (delegatorObj.datesRequested.length > 1) {
+
+          findAvailPromiseArr = delegatorObj.datesRequested.map( dayToCheck => {
+
+            Availability = new RecordAvailability()
+
+            return new Promise((resolve,reject) => {
+
+              resolve(findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, dayToCheck, Availability))
+            })
+          })
+        }
+
+
+        console.log('before promiseAll', findAvailPromiseArr)
+        Promise.all(findAvailPromiseArr).then(availabilityArr => {
+          console.log('what we get back from Promise.all', availabilityArr)
 
           let suggestString = ''
-          availabilityArr.forEach((suggestion, index) => {
-            suggestString += `${index + 1}) ${suggestion.start}
-            ${suggestion.end}\n \n`
+
+          availabilityArr.forEach( dayAvailabilityArr => {
+            if (dayAvailabilityArr[0].booked) {
+              msg.reply('Woof woof! Unfortunatley it looks like your day is fully booked. Try running `@doge cal suggest week` to check your availability for the week.')
+              return
+            }
+
+            dayAvailabilityArr.forEach((suggestion, index) => {
+              let dayOfWeekBold = moment(suggestion.rawStartTime, 'DD-MM-YYYY HH-mm-ss').format('dddd')
+
+              suggestString += `*${dayOfWeekBold}* \n ${suggestion.start}
+              ${suggestion.end}\n \n`
+            })
+
           })
 
-          msg.reply(`Woof woof! Here are some meeting suggestions for ${dayRequested.format('LL')}: \n \n` + suggestString)
+          msg.reply(`Woof woof! Here are some meeting suggestions for ${Command.getRequestedQuery()}: \n \n` + suggestString)
+
 
         }).catch(err => {
           console.log('err', err)
