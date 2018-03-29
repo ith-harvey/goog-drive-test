@@ -18,4 +18,4 @@ class Delegator {
 
 }
 
-module.exports = {Delegator}
+module.exports = Delegator

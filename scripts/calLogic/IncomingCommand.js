@@ -1,4 +1,11 @@
+const Delegator = require('./Delegator')
+const DelegatorObject = new Delegator()
+
+const Time = require('./Time.js')
+const Misc = require('./Misc.js')
+
 class IncomingCommand {
+
   constructor() {
     this.timeFrameRequested = ''
   }
@@ -10,8 +17,8 @@ class IncomingCommand {
     let monthQuery = regExp.test(cmdArr[i+1])
 
     if (cmdArr.length - 1 === i) {
-      DelegatorObject.add('datesRequested', getTodaysDate())
-      this.setRequestedQuery(`today, ${getTodaysDate().format('LL')}`)
+      DelegatorObject.add('datesRequested', Time.getTodaysDate())
+      this.setRequestedQuery(`today, ${Time.getTodaysDate().format('LL')}`)
       return DelegatorObject.get()// just basic query
     }
 
@@ -21,7 +28,7 @@ class IncomingCommand {
 
     if (cmdArr[i+1] === 'week') {
       console.log('week query')
-      let weeksWorkingDaysArr = setScopeOfWorkWeek(getTodaysDate())
+      let weeksWorkingDaysArr = Misc.setScopeOfWorkWeek(Time.getTodaysDate())
       this.setRequestedQuery('this week')
 
       DelegatorObject.add('datesRequested', weeksWorkingDaysArr)
@@ -46,4 +53,4 @@ class IncomingCommand {
   }
 }
 
-module.exports = {Command}
+module.exports = IncomingCommand

@@ -1,3 +1,9 @@
+const momentTZ = require('moment-timezone');
+const moment = require('moment');
+
+const Time = require('./Time.js')
+const Misc = require('./Misc.js')
+
 class RecordAvailability {
   constructor() {
     this.lastEventEndTime = 'undefined'
@@ -24,7 +30,7 @@ class RecordAvailability {
   }
 
   dayIsFreeAddAvail(wrkHrs, dateAvailRequested) {
-    let dateRequestedWrkHrs = chngWrkHrsToDateRequested(wrkHrs, dateAvailRequested)
+    let dateRequestedWrkHrs = Time.chngWrkHrsToDateRequested(wrkHrs, dateAvailRequested)
 
     this.addAvailability(wrkHrs, dateRequestedWrkHrs.start, dateRequestedWrkHrs.end)
   }
@@ -32,7 +38,7 @@ class RecordAvailability {
   generateSuggestTimes(wrkHrs, dateAvailRequested) {
     let endTime
 
-    randomStartTimesArray(
+    Misc.randomStartTimesArray(
       wrkHrs.start.hour(),
       wrkHrs.end.hour(),
       dateAvailRequested).forEach(startTime =>  {
@@ -67,11 +73,11 @@ class RecordAvailability {
   addAvailability(wrkHrs, availStart, availEnd) {
     this.availabilityArr.push({
 
-      start: `${wrkHrs.timeZone}: ${localTime(availStart, wrkHrs.timeZone)} UTC: ${availStart}`,
+      start: `${wrkHrs.timeZone}: ${Time.localTime(availStart, wrkHrs.timeZone)} UTC: ${availStart}`,
 
-      end: `${wrkHrs.timeZone}: ${localTime(availEnd, wrkHrs.timeZone)} UTC: ${availEnd}`,
+      end: `${wrkHrs.timeZone}: ${Time.localTime(availEnd, wrkHrs.timeZone)} UTC: ${availEnd}`,
 
-      rawStartTime: localTime(availStart, wrkHrs.timeZone),
+      rawStartTime: Time.localTime(availStart, wrkHrs.timeZone),
 
     })
   }
@@ -80,4 +86,4 @@ class RecordAvailability {
 
 }
 
-module.exports = {RecordAvailability}
+module.exports = RecordAvailability

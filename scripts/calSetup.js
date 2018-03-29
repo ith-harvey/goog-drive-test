@@ -28,148 +28,8 @@ const ical2json = require('ical2json')
 const IncomingCommand = require('./calLogic/IncomingCommand.js')
 const RecordAvailability = require('./calLogic/RecordAvailability.js')
 const Delegator = require('./calLogic/Delegator.js')
-
-const getTodaysDate = currentTimeZone => moment.utc()
-const minutesOfDay = m => m.minutes() + m.hours() * 60;
-
-function formatDate(timeZone, icalStr) {
-  let strYear = icalStr.substr(0, 4);
-  let strMonth = parseInt(icalStr.substr(4, 2), 10) - 2;
-  let strDay = icalStr.substr(6, 2);
-  let strHour = icalStr.substr(9, 2);
-  let strMin = icalStr.substr(11, 2);
-  let strSec = icalStr.substr(13, 2);
-  strMonth += 1
-  let dateNeedsFormat = new Date(strYear, strMonth, strDay, strHour, strMin, strSec)
-
-  return moment.utc(dateNeedsFormat, 'YYYY-MM-DD HH:mm:ss Z').month(strMonth).date(strDay).hours(strHour).minutes(strMin).seconds(strSec)
-
-}
-
-function localTime(time, timeZone) {
-  let timeClone = moment(time)
-  return timeClone.tz(timeZone).format('DD-MM-YYYY hh:mm:ss')
-}
-
-
-
-function checkIfUserIsSetup(robot, userId) {
-  // input validation function
-
-  if (robot.brain.get(userId) === null) {
-    //user has not started the setup process.
-    return true
-
-  } else if (robot.brain.get(userId).busyCalUrl === undefined) {
-    //user has not provided a URL.
-    return true
-
-  } else if (robot.brain.get(userId).workHrs === undefined) {
-    //user has not provided working hours.
-    return true
-  }
-
-  return false // user is already setup for cal suggest feature
-}
-
-function buildEventWeek(dayProvided) {
-  let startOfWorkWeek = moment(dayProvided).startOf('isoWeek');
-  let endOfWorkWeek = moment(dayProvided).endOf('isoWeek').subtract(2, 'days')
-
-  let daysToCheckAvailability = [];
-  let day = startOfWorkWeek;
-
-  while (day <= endOfWorkWeek) {
-    if (day.date() >= getTodaysDate().date()) {
-
-      daysToCheckAvailability.push(moment.utc(day.toDate()));
-    }
-      day = day.clone().add(1, 'd');
-  }
-  return daysToCheckAvailability
-}
-
-function setScopeOfWorkWeek(dayProvided) {
-  if (1 <= dayProvided.isoWeekday() && dayProvided.isoWeekday() <= 5 ) {
-
-    return buildEventWeek(dayProvided)
-
-  } else if (6 === dayProvided.isoWeekday() || dayProvided.isoWeekday() === 7) {
-
-    // What we should do for weekends when this query is run??
-
-    // return buildEventWeek(dayProvided)
-  }
-}
-
-function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
-
-  let start = {
-    Hrs: wrkHrs.slice(0, 2),
-    Min: wrkHrs.slice(3, 5),
-  }
-
-  let end = {
-    Hrs: wrkHrs.slice(8, 10),
-    Min: wrkHrs.slice(11, 13),
-  }
-
-  let returnObj = {
-    start: moment(wrkHrs.slice(0, wrkHrs.indexOf('-')), 'HH:mm')
-    .tz(timeZone).hours(start.Hrs).minutes(start.Min).utc(),
-
-    end: moment(wrkHrs.slice(wrkHrs.indexOf('-') + 1, wrkHrs.length), 'HH:mm')
-    .tz(timeZone).hours(end.Hrs).minutes(end.Min).utc(),
-
-    timeZone: timeZone,
-  }
-
-  return returnObj
-}
-
-function chngWrkHrsToDateRequested(wrkHrs, dateAvailRequested) {
-
-  return {
-    start: moment.utc(dateAvailRequested).hours(wrkHrs.start.hours())
-    .minutes(wrkHrs.start.minutes()),
-
-    end: moment.utc(dateAvailRequested).hours(wrkHrs.end.hours())
-    .minutes(wrkHrs.end.minutes()),
-  }
-}
-
-function randomStartTimesArray(availBlockStarts, availBlockEnds, dateAvailRequested) {
-
-  function randomIntFromInterval(min, max) {
-    return Math.floor(Math.random() * (max - min + 1) + min)
-  }
-
-  let startTime = {
-    Obj: {},
-    Arr: [],
-  }
-
-  let stagingStartTime = randomIntFromInterval(availBlockStarts, availBlockEnds)
-
-  startTime.Obj[stagingStartTime] = true
-  startTime.Arr.push(moment(dateAvailRequested).hours(stagingStartTime).minutes(00).seconds(00))
-
-  let currStartTime
-
-  while (Object.keys(startTime.Obj).length <= 2) {
-
-    currStartTime = randomIntFromInterval(availBlockStarts, availBlockEnds)
-
-    if (!startTime.Obj[currStartTime]) {
-      startTime.Obj[currStartTime] = true
-      startTime.Arr.push(moment(dateAvailRequested).hours(currStartTime).minutes(00).seconds(00))
-    }
-  }
-
-  return startTime.Arr
-}
-
-
+const Time = require('./calLogic/Time.js')
+const Misc = require('./calLogic/Misc.js')
 
 /**
    * findAvailabilityOverTime()
@@ -190,8 +50,8 @@ function randomStartTimesArray(availBlockStarts, availBlockEnds, dateAvailReques
 const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested,  Availability) => {
   let i = 0
   let currEvent = eventArr[i]
-  let eventStart = formatDate(wrkHrs.timeZone, currEvent.DTSTART)
-  let eventEnd = formatDate(wrkHrs.timeZone, currEvent.DTEND)
+  let eventStart = Time.formatDate(wrkHrs.timeZone, currEvent.DTSTART)
+  let eventEnd = Time.formatDate(wrkHrs.timeZone, currEvent.DTEND)
 
   while (eventStart.date() <= dateAvailRequested.date()) {
     // console.log('same day! rquest', dateAvailRequested)
@@ -202,14 +62,14 @@ const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested,  Availab
     if (eventStart.date() === dateAvailRequested.date()) {
       // events that happen on selected day
 
-      if (minutesOfDay(eventStart) <= minutesOfDay(wrkHrs.start)) {
+      if (Time.minutesOfDay(eventStart) <= Time.minutesOfDay(wrkHrs.start)) {
         // event start happens before || same time as wrkhrs start
 
-        if (minutesOfDay(eventEnd) <= minutesOfDay(wrkHrs.start)) {
+        if (Time.minutesOfDay(eventEnd) <= Time.minutesOfDay(wrkHrs.start)) {
           // event end happens before || same time as wrkhrs start
           // the entire event happens before working hours
           // do nothing -> go to next event
-        } else if (minutesOfDay(eventEnd) >= minutesOfDay(wrkHrs.end)) {
+        } else if (Time.minutesOfDay(eventEnd) >= Time.minutesOfDay(wrkHrs.end)) {
           // event books out the entire day!
           Availability.wholeDayIsBooked(wrkHrs)
         } else {
@@ -219,7 +79,7 @@ const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested,  Availab
 
       } else { // event start happens after wrkhrs start
 
-        if (minutesOfDay(eventStart) < minutesOfDay(wrkHrs.end)) {
+        if (Time.minutesOfDay(eventStart) < Time.minutesOfDay(wrkHrs.end)) {
 
           // event start happens during work hours
           Availability.set(wrkHrs, eventEnd, eventStart)
@@ -238,8 +98,8 @@ const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested,  Availab
 
     i++
     currEvent = eventArr[i]
-    eventStart = formatDate(wrkHrs.timeZone, currEvent.DTSTART)
-    eventEnd = formatDate(wrkHrs.timeZone, currEvent.DTEND)
+    eventStart = Time.formatDate(wrkHrs.timeZone, currEvent.DTSTART)
+    eventEnd = Time.formatDate(wrkHrs.timeZone, currEvent.DTEND)
   }
 
   Availability.setUntilEndOfWorkDay(wrkHrs)
@@ -287,11 +147,11 @@ module.exports = (robot) => {
 
   robot.respond(/(cal suggest)/i, function (msg) {
 
-    if (checkIfUserIsSetup(robot, msg.message.user.id)) {
+    if (Misc.checkIfUserIsSetup(robot, msg.message.user.id)) {
       msg.reply('Woof woof! To use the `@doge cal suggest` feature you must first go through the setup wizard. Do so by typing the command `@doge cal setup`.')
     } else {
 
-      let Command = new IncomingCommand
+      let Command = new IncomingCommand()
 
       let delegatorObj = Command.interpreter(msg.message.text.split(' '))
 
@@ -309,7 +169,7 @@ module.exports = (robot) => {
 
         let Availability = new RecordAvailability()
 
-        let wrkHrsInUTC = wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone)
+        let wrkHrsInUTC = Time.wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone)
 
         let findAvailPromiseArr = [ new Promise((resolve, reject) => {
               resolve(findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, delegatorObj.datesRequested[0], Availability))
