@@ -25,6 +25,10 @@ const moment = require('moment');
 const rp = require('request-promise')
 const ical2json = require('ical2json')
 
+const IncomingCommand = require('./calLogic/IncomingCommand.js')
+const RecordAvailability = require('./calLogic/RecordAvailability.js')
+const Delegator = require('./calLogic/Delegator.js')
+
 const getTodaysDate = currentTimeZone => moment.utc()
 const minutesOfDay = m => m.minutes() + m.hours() * 60;
 
@@ -74,10 +78,10 @@ function buildEventWeek(dayProvided) {
 
   let daysToCheckAvailability = [];
   let day = startOfWorkWeek;
+
   while (day <= endOfWorkWeek) {
     if (day.date() >= getTodaysDate().date()) {
-      // console.log('pushing', day.toDate())
-      // console.log('pushing', moment.utc(day.toDate()))
+
       daysToCheckAvailability.push(moment.utc(day.toDate()));
     }
       day = day.clone().add(1, 'd');
@@ -97,77 +101,6 @@ function setScopeOfWorkWeek(dayProvided) {
     // return buildEventWeek(dayProvided)
   }
 }
-
-class IncomingCommand {
-  constructor() {
-    this.timeFrameRequested = ''
-  }
-
-  interpreter (cmdArr) {
-    let DelegatorObject = new Delegator
-    let i = cmdArr.indexOf('suggest')
-    let regExp = /(may|february|january|august|september|october|november|december|march|april|july|june)/
-    let monthQuery = regExp.test(cmdArr[i+1])
-
-    if (cmdArr.length - 1 === i) {
-      DelegatorObject.add('datesRequested', getTodaysDate())
-      this.setRequestedQuery(`today, ${getTodaysDate().format('LL')}`)
-      return DelegatorObject.get()// just basic query
-    }
-
-    if (cmdArr[i+1][0] === '@') {
-      console.log('adding users to query')
-    }
-
-    if (cmdArr[i+1] === 'week') {
-      console.log('week query')
-      let weeksWorkingDaysArr = setScopeOfWorkWeek(getTodaysDate())
-      this.setRequestedQuery('this week')
-
-      DelegatorObject.add('datesRequested', weeksWorkingDaysArr)
-
-      return DelegatorObject.get()
-    }
-
-    if (monthQuery) {
-      return 'specificDayQuery'
-      console.log('specific month/day query')
-    }
-
-    return DelegatorObject.get()
-  }
-
-  setRequestedQuery(msg) {
-    this.timeFrameRequested = msg
-  }
-
-  getRequestedQuery(msg) {
-    return this.timeFrameRequested
-  }
-
-}
-
-class Delegator {
-  constructor() {
-    this.delegatorObj = {
-      calGuests: [],
-      datesRequested: [],
-    }
-  }
-
-  add (addTo, whatWeAdd) {
-    if (Array.isArray(whatWeAdd)) {
-      this.delegatorObj[addTo] = whatWeAdd
-    } else {
-      this.delegatorObj[addTo].push(whatWeAdd)
-    }
-  }
-
-  get() { return this.delegatorObj}
-
-}
-
-
 
 function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
 
@@ -195,15 +128,6 @@ function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
 }
 
 function chngWrkHrsToDateRequested(wrkHrs, dateAvailRequested) {
-  console.log('dateAvail', dateAvailRequested)
-
-  console.log('updated to date Avail!!', {
-      start: moment.utc(dateAvailRequested).hours(wrkHrs.start.hours())
-      .minutes(wrkHrs.start.minutes()),
-
-      end: moment.utc(dateAvailRequested).hours(wrkHrs.end.hours())
-      .minutes(wrkHrs.end.minutes()),
-    })
 
   return {
     start: moment.utc(dateAvailRequested).hours(wrkHrs.start.hours())
@@ -245,87 +169,7 @@ function randomStartTimesArray(availBlockStarts, availBlockEnds, dateAvailReques
   return startTime.Arr
 }
 
-class RecordAvailability {
-  constructor() {
-    this.lastEventEndTime = 'undefined'
-    this.availabilityArr = []
-  }
 
-  set(wrkHrs, eventEnd, eventStart) {
-    if (eventStart === undefined) { //event started before working hours
-      console.log('settting event end')
-      this.lastEventEndTime = eventEnd
-      return
-    }
-
-    if (this.lastEventEndTime === 'undefined') {
-      // first event that day && there is gap time between wrkHrs start and eventStart
-      this.lastEventEndTime = wrkHrs.start
-    }
-    this.findAvailability(wrkHrs, eventStart)
-    this.lastEventEndTime = eventEnd
-  }
-
-  setUntilEndOfWorkDay(wrkHrs) {
-    this.findAvailability(wrkHrs, wrkHrs.end)
-  }
-
-  dayIsFreeAddAvail(wrkHrs, dateAvailRequested) {
-    let dateRequestedWrkHrs = chngWrkHrsToDateRequested(wrkHrs, dateAvailRequested)
-
-    this.addAvailability(wrkHrs, dateRequestedWrkHrs.start, dateRequestedWrkHrs.end)
-  }
-
-  generateSuggestTimes(wrkHrs, dateAvailRequested) {
-    let endTime
-
-    randomStartTimesArray(
-      wrkHrs.start.hour(),
-      wrkHrs.end.hour(),
-      dateAvailRequested).forEach(startTime =>  {
-
-        endTime = moment(startTime).add(1, 'hours')
-        this.addAvailability(wrkHrs, startTime, endTime)
-      })
-  }
-
-  findAvailability(wrkHrs, eventStart) {
-
-    let availTime =  moment.duration(eventStart.diff(this.lastEventEndTime)).asMinutes()
-
-    let availabilityStartPoint = this.lastEventEndTime
-
-    for (let i = 1; i <= (availTime / 60); i++) {
-      // only create 60 min suggestions
-
-      this.addAvailability(wrkHrs, availabilityStartPoint, moment(availabilityStartPoint).add(1, 'hours'))
-
-      availabilityStartPoint = moment(availabilityStartPoint).add(1, 'hours') //bump suggestionStartPoint an hour
-    }
-  }
-
-  wholeDayIsBooked(wrkHrs) {
-    this.availabilityArr.push({
-      booked: wrkHrs.start,
-      bookedMsg: 'day is completely booked',
-    })
-  }
-
-  addAvailability(wrkHrs, availStart, availEnd) {
-    this.availabilityArr.push({
-
-      start: `${wrkHrs.timeZone}: ${localTime(availStart, wrkHrs.timeZone)} UTC: ${availStart}`,
-
-      end: `${wrkHrs.timeZone}: ${localTime(availEnd, wrkHrs.timeZone)} UTC: ${availEnd}`,
-
-      rawStartTime: localTime(availStart, wrkHrs.timeZone),
-
-    })
-  }
-
-  get() { return this.availabilityArr}
-
-}
 
 /**
    * findAvailabilityOverTime()
@@ -340,9 +184,6 @@ class RecordAvailability {
 
 /*
 * 1) events that happen on selected day
-*
-*
-*
 *
 */
 
