@@ -53,9 +53,14 @@ function setScopeOfWorkWeek(dayProvided) {
   }
 }
 
-function randomStartTimesArray(availBlockStarts, availBlockEnds, dateAvailRequested) {
+function randomStartTimesArray(availBlockStarts, availBlockEnds, dateRequested) {
+  console.log('starts', availBlockStarts)
+  console.log('ends', availBlockEnds)
 
-  function randomIntFromInterval(min, max) {
+  let buildStTime = (date, hr, min) =>  moment(date).hours(hr).minutes(min).seconds(00).milliseconds(00)
+
+  let randomIntFromInterval = (min, max) => {
+    max = max - 1
     return Math.floor(Math.random() * (max - min + 1) + min)
   }
 
@@ -64,12 +69,14 @@ function randomStartTimesArray(availBlockStarts, availBlockEnds, dateAvailReques
     Arr: [],
   }
 
+  let currStartTime
   let stagingStartTime = randomIntFromInterval(availBlockStarts, availBlockEnds)
 
-  startTime.Obj[stagingStartTime] = true
-  startTime.Arr.push(moment(dateAvailRequested).hours(stagingStartTime).minutes(00).seconds(00))
 
-  let currStartTime
+  console.log('our Arr', availBlockStarts)
+
+  startTime.Obj[stagingStartTime] = true
+  startTime.Arr.push(buildStTime(dateRequested, stagingStartTime, 00))
 
   while (Object.keys(startTime.Obj).length <= 2) {
 
@@ -77,9 +84,11 @@ function randomStartTimesArray(availBlockStarts, availBlockEnds, dateAvailReques
 
     if (!startTime.Obj[currStartTime]) {
       startTime.Obj[currStartTime] = true
-      startTime.Arr.push(moment(dateAvailRequested).hours(currStartTime).minutes(00).seconds(00))
+      startTime.Arr.push(buildStTime(dateRequested, currStartTime, 00))
     }
   }
+
+  console.log('start time obj', startTime.Obj)
 
   return startTime.Arr
 }

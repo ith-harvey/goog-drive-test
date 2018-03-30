@@ -12,7 +12,6 @@ class RecordAvailability {
 
   set(wrkHrs, eventEnd, eventStart) {
     if (eventStart === undefined) { //event started before working hours
-      console.log('settting event end')
       this.lastEventEndTime = eventEnd
       return
     }
@@ -32,24 +31,12 @@ class RecordAvailability {
   dayIsFreeAddAvail(wrkHrs, dateAvailRequested) {
     let dateRequestedWrkHrs = Time.chngWrkHrsToDateRequested(wrkHrs, dateAvailRequested)
 
-    this.addAvailability(wrkHrs, dateRequestedWrkHrs.start, dateRequestedWrkHrs.end)
-  }
+    let dayIsFree = true
 
-  generateSuggestTimes(wrkHrs, dateAvailRequested) {
-    let endTime
-
-    Misc.randomStartTimesArray(
-      wrkHrs.start.hour(),
-      wrkHrs.end.hour(),
-      dateAvailRequested).forEach(startTime =>  {
-
-        endTime = moment(startTime).add(1, 'hours')
-        this.addAvailability(wrkHrs, startTime, endTime)
-      })
+    this.add(wrkHrs, dateRequestedWrkHrs.start, dateRequestedWrkHrs.end, dayIsFree)
   }
 
   findAvailability(wrkHrs, eventStart) {
-
     let availTime =  moment.duration(eventStart.diff(this.lastEventEndTime)).asMinutes()
 
     let availabilityStartPoint = this.lastEventEndTime
@@ -57,7 +44,7 @@ class RecordAvailability {
     for (let i = 1; i <= (availTime / 60); i++) {
       // only create 60 min suggestions
 
-      this.addAvailability(wrkHrs, availabilityStartPoint, moment(availabilityStartPoint).add(1, 'hours'))
+      this.add(wrkHrs, availabilityStartPoint, moment(availabilityStartPoint).add(1, 'hours'))
 
       availabilityStartPoint = moment(availabilityStartPoint).add(1, 'hours') //bump suggestionStartPoint an hour
     }
@@ -70,16 +57,21 @@ class RecordAvailability {
     })
   }
 
-  addAvailability(wrkHrs, availStart, availEnd) {
-    this.availabilityArr.push({
+  add(wrkHrs, availStart, availEnd, dayIsFree) {
 
+    let availabilityObj = {
       start: `${wrkHrs.timeZone}: ${Time.localTime(availStart, wrkHrs.timeZone)} UTC: ${availStart}`,
 
       end: `${wrkHrs.timeZone}: ${Time.localTime(availEnd, wrkHrs.timeZone)} UTC: ${availEnd}`,
 
-      rawStartTime: Time.localTime(availStart, wrkHrs.timeZone),
+      rawStartTime: availStart,
 
-    })
+      rawEndTime: availEnd,
+    }
+
+    if (dayIsFree) availabilityObj.dayIsFree = true
+
+    this.availabilityArr.push(availabilityObj)
   }
 
   get() { return this.availabilityArr}
