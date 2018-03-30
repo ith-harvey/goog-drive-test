@@ -21,7 +21,7 @@ function formatDate(timeZone, icalStr) {
 
 function localTime(time, timeZone) {
   let timeClone = moment(time)
-  return timeClone.tz(timeZone).format('DD-MM-YYYY hh:mm:ss')
+  return timeClone.tz(timeZone).format('DD-MM-YYYY hh:mm:ss a')
 }
 
 function wrkHrsParse(wrkHrs, timeZone, dayRequested) {

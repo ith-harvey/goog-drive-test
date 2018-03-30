@@ -10,7 +10,7 @@ class RecordSuggestion {
     this.suggestionArr = []
   }
 
-  generateThree(timeWindowStart, timeWindowEnd, wrkHrs) {
+  generateThreeFreeDay(timeWindowStart, timeWindowEnd, wrkHrs) {
     let endTime
 
     let arr = Misc.randomStartTimesArray(timeWindowStart.hour(), timeWindowEnd.hour(), wrkHrs.start)
@@ -24,18 +24,62 @@ class RecordSuggestion {
     return this.get()
   }
 
+
+  // sortSuggestsChronologically () {
+  //   if (this.suggestionArr.length === 1) return
+  //
+  //   for (i = 0; i < arrCline - 1; i++) {
+  //     if (this.suggestionArr[i].isAfter(this.suggestionArr[i+1])) {
+  //       this.suggestionArr.splice()
+  //     }
+  //   }
+  //
+  //
+  //
+  // }
+
+  recurseToFindSuggest(availArr, wrkHrs, currItem, suggestObj) {
+
+    if (this.suggestionArr.length === 3) {
+      return
+    }
+
+    currItem = availArr[Math.floor(Math.random()*availArr.length)];
+
+    if (!suggestObj[currItem.rawStartTime]) {
+      suggestObj[currItem.rawStartTime] = true
+      this.add(wrkHrs, currItem.rawStartTime, currItem.rawEndTime)
+    }
+
+    return this.recurseToFindSuggest(availArr, wrkHrs, currItem, suggestObj)
+  }
+
+  generatethreeSemiBusyDay(availArr, wrkHrs) {
+
+    if (availArr.length <= 3) {
+      // could have only one/two/three items in ARR
+      this.sortSuggestsChronologically()
+      return this.get()
+    }
+
+    this.recurseToFindSuggest(availArr, wrkHrs, '', {})
+    // this.sortSuggestsChronologically()
+
+    return this.get()
+  }
+
   add(wrkHrs, availStart, availEnd) {
 
     this.suggestionArr.push({
-      start: `${wrkHrs.timeZone}: ${Time.localTime(availStart, wrkHrs.timeZone)} UTC: ${availStart}`,
 
-      end: `${wrkHrs.timeZone}: ${Time.localTime(availEnd, wrkHrs.timeZone)} UTC: ${availEnd}`,
+      localTime: `${wrkHrs.timeZone}: ${moment(Time.localTime(availStart, wrkHrs.timeZone), 'DD-MM-YYYY hh:mm:ss a').format("hh:mm:ss a")} - ${moment(Time.localTime(availEnd, wrkHrs.timeZone), 'DD-MM-YYYY hh:mm:ss a').format("hh:mm:ss a")}`,
+
+      UTC: `UTC: ${availStart} - ${availEnd}`,
 
       rawStartTime: availStart,
 
       rawEndTime: availEnd,
     })
-
 
   }
 

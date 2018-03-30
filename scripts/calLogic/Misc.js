@@ -54,8 +54,6 @@ function setScopeOfWorkWeek(dayProvided) {
 }
 
 function randomStartTimesArray(availBlockStarts, availBlockEnds, dateRequested) {
-  console.log('starts', availBlockStarts)
-  console.log('ends', availBlockEnds)
 
   let buildStTime = (date, hr, min) =>  moment(date).hours(hr).minutes(min).seconds(00).milliseconds(00)
 
@@ -72,9 +70,6 @@ function randomStartTimesArray(availBlockStarts, availBlockEnds, dateRequested) 
   let currStartTime
   let stagingStartTime = randomIntFromInterval(availBlockStarts, availBlockEnds)
 
-
-  console.log('our Arr', availBlockStarts)
-
   startTime.Obj[stagingStartTime] = true
   startTime.Arr.push(buildStTime(dateRequested, stagingStartTime, 00))
 
@@ -88,8 +83,6 @@ function randomStartTimesArray(availBlockStarts, availBlockEnds, dateRequested) 
     }
   }
 
-  console.log('start time obj', startTime.Obj)
-
   return startTime.Arr
 }
 
@@ -98,6 +91,4 @@ module.exports = {
   checkIfUserIsSetup,
   buildEventWeek,
   setScopeOfWorkWeek
-
-
 }
