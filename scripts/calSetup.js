@@ -59,7 +59,6 @@ function dayVsWeekAvailLoopAndBuildSuggestions(findAvailResp, Command) {
       daySuggestionArr = Suggestion.generateThreeFreeDay(startWindow, endWindow, dayAvailability.wrkHrs)
 
     } else {
-
       daySuggestionArr = Suggestion.generatethreeSemiBusyDay(dayAvailability.arr, dayAvailability.wrkHrs)
 
     }
@@ -70,8 +69,6 @@ function dayVsWeekAvailLoopAndBuildSuggestions(findAvailResp, Command) {
     let justDate = dayOfWeek.format('LL')
 
     suggestString = `*${dayOfWeekBold} ${justDate}*`
-
-    console.log('dayAvail', daySuggestionArr)
 
     daySuggestionArr.forEach( availWindow => {
 
