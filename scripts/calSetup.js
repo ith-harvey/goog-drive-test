@@ -124,36 +124,28 @@ const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested, Availabi
   while (eventStart.isSameOrBefore(dateAvailRequested, 'day')) {
 
     if (eventStart.isSame(dateAvailRequested, 'day')) {
-      // events that happen on selected day
-      // console.log('----- eventstart', dateAvailRequested)
-      // console.log('----- eventstart', eventStart)
-      // console.log('----- wrkstart', wrkHrs.start)
-      // console.log('eventst and wrksstart is same or before', eventStart.isSameOrBefore(wrkHrs.start,'minutes'));
+
 
       if (eventStart.isSameOrBefore(wrkHrs.start,'minutes')) {
         // event start happens before || same time as wrkhrs start
-
-        // console.log('----- start', eventStart)
-        // console.log('----- end', eventEnd)
 
         if (eventEnd.isSameOrBefore(wrkHrs.start, 'minutes')) {
           // event end happens before || same time as wrkhrs start
           // the entire event happens before working hours
           // do nothing -> go to next event
+
         } else if (eventEnd.isSameOrAfter(wrkHrs.end,'minutes')) {
           // event books out the entire day!
           Availability.wholeDayIsBooked(wrkHrs)
+
         } else {
-          console.log('should be herrr')
           //event ends during working hours
           Availability.set(wrkHrs, eventEnd)
-          console.log('post of set', Availability.get())
         }
 
       } else { // event start happens after wrkhrs start
 
         if (eventStart.isBefore(wrkHrs.end, 'minutes')) {
-
           // event start happens during work hours
           Availability.set(wrkHrs, eventEnd, eventStart)
 
@@ -196,9 +188,11 @@ module.exports = (robot) => {
     awaitingUrl = true
   })
 
-  robot.hear(/^(http|https)/i, function (msg) {
+  robot.hear(/https/i, function (msg) {
     if (awaitingUrl) {
-      robot.brain.set(msg.message.user.id, { busyCalUrl: msg.message.text })
+      let url = msg.message.text.split(' ')[1]
+
+      robot.brain.set(msg.message.user.id, { busyCalUrl: url })
 
       msg.reply('Woof woof! URL was received... \n \n Excellent, now I need to know your preferred working hours when you will be available for meetings. \n \n Please enter them in 24hr format: <HH:mm>-<HH:mm> (e.g. 09:00-17:00)')
 
@@ -209,11 +203,11 @@ module.exports = (robot) => {
 
   robot.hear(/[0-9][0-9]:[0-5][0-9]-[0-9][0-9]:[0-5][0-9]/i, function (msg) {
     if (awaitingWorkHours) {
-      console.log('in save', robot.brain.get(msg.message.user.id))
+      let hrs = msg.message.text.split(' ')[1]
 
       robot.brain.set(msg.message.user.id, {
         busyCalUrl: robot.brain.get(msg.message.user.id).busyCalUrl,
-        workHrs: msg.message.text,
+        workHrs: hrs,
       })
 
       msg.reply('Woof woof! Thank you for completing the cal setup wizard!, you may now use the `@doge cal suggest` feature.')
@@ -245,18 +239,11 @@ module.exports = (robot) => {
 
         msg.reply('Your current Timezone (set at fastmail.com): ' + data.timeZone)
 
-        let Availability = new CreateAvailability()
+        let Availability, wrkHrsInUTC, findAvailPromiseArr
 
-        let wrkHrsInUTC = Time.wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone, Time.getTodaysDate())
-
-        let findAvailPromiseArr = [ new Promise((resolve, reject) => {
-              resolve(findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, delegatorObj.datesRequested[0], Availability))
-          })]
-
-        if (delegatorObj.datesRequested.length > 1) {
           findAvailPromiseArr = delegatorObj.datesRequested.map( dayToCheck => {
 
-            let wrkHrsInUTC = Time.wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone, dayToCheck)
+            wrkHrsInUTC = Time.wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone, dayToCheck)
 
             Availability = new CreateAvailability()
 
@@ -264,7 +251,6 @@ module.exports = (robot) => {
               resolve(findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, dayToCheck, Availability))
             })
           })
-        }
 
         Promise.all(findAvailPromiseArr).then(findAvailResp => {
 

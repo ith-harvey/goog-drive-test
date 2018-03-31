@@ -17,20 +17,22 @@ class IncomingCommand {
     let monthQuery = (text) => regExp.test(text)
 
     if (cmdArr.length - 1 === basicQuery) {
+      // basic query (not a week, no dates, no extra users)
+      
       DelegatorObject.add('datesRequested', Time.getTodaysDate())
       this.setRequestedQuery(`today, ${Time.getTodaysDate().format('LL')}`)
       return DelegatorObject.get() // just today query
     }
 
     if (cmdArr[basicQuery + 1][0] === '@') {
-      console.log('adding users to query')
+      // adding users to query
     }
 
     if (cmdArr[basicQuery + 1] === 'week') {
-      console.log('week query')
+      // in week query
 
       if (cmdArr.length === 4) {
-        console.log('no dates')
+        // week query no dates
         let weeksWorkingDaysArr = Misc.setScopeOfWorkWeek(Time.getTodaysDate())
         this.setRequestedQuery('this week')
         DelegatorObject.add('datesRequested', weeksWorkingDaysArr)
@@ -38,7 +40,7 @@ class IncomingCommand {
         return DelegatorObject.get()
 
       } else if (monthQuery(cmdArr[basicQuery + 2])){
-        console.log('with dates')
+        // week query with dates
         let dateRequested = Time.interpDate(cmdArr[basicQuery + 2], cmdArr[basicQuery + 3])
 
         let weeksWorkingDaysArr = Misc.setScopeOfWorkWeek(dateRequested)
@@ -50,13 +52,15 @@ class IncomingCommand {
         // let weeksWorkingDaysArr = Misc.setScopeOfWorkWeek(Time.interpDate())
       }
     }
-
     if (monthQuery(cmdArr[basicQuery + 1])) {
-      console.log('specific month/day query')
-      return 'specificDayQuery'
-    }
+      let dateRequested = Time.interpDate(cmdArr[basicQuery + 1], cmdArr[basicQuery + 2])
 
-    return DelegatorObject.get()
+      DelegatorObject.add('datesRequested', dateRequested)
+
+      this.setRequestedQuery(`${dateRequested.format('LL')}`)
+
+      return DelegatorObject.get()
+    }
   }
 
   setRequestedQuery(msg) {

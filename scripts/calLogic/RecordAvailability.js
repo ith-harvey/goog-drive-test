@@ -11,7 +11,6 @@ class CreateAvailability {
   }
 
   set(wrkHrs, eventEnd, eventStart) {
-    console.log('in set');
     if (eventStart === undefined) { //event started before working hours
       this.lastEventEndTime = eventEnd
       return
@@ -58,7 +57,6 @@ class CreateAvailability {
   }
 
   add(wrkHrs, availStart, availEnd, dayIsFree) {
-    console.log('making add', dayIsFree);
 
     let availabilityObj = {
       start: `${wrkHrs.timeZone}: ${Time.localTime(availStart, wrkHrs.timeZone)} UTC: ${availStart}`,
