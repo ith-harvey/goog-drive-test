@@ -5,15 +5,15 @@ const moment = require('moment');
 const Time = require('./Time.js')
 const Misc = require('./Misc.js')
 
-class RecordSuggestion {
+class CreateSuggestion {
   constructor() {
     this.suggestionArr = []
   }
 
   generateThreeFreeDay(timeWindowStart, timeWindowEnd, wrkHrs) {
     let endTime
-
-    let arr = Misc.randomStartTimesArray(timeWindowStart.hour(), timeWindowEnd.hour(), wrkHrs.start)
+    let dateRequested = timeWindowStart
+    let arr = Misc.randomStartTimesArray(timeWindowStart.hour(), timeWindowEnd.hour(), dateRequested)
 
     arr.forEach(startTime =>  {
 
@@ -33,9 +33,6 @@ class RecordSuggestion {
   //       this.suggestionArr.splice()
   //     }
   //   }
-  //
-  //
-  //
   // }
 
   recurseToFindSuggest(availArr, wrkHrs, currItem, suggestObj) {
@@ -58,7 +55,10 @@ class RecordSuggestion {
 
     if (availArr.length <= 3) {
       // could have only one/two/three items in ARR
-      this.sortSuggestsChronologically()
+      // this.sortSuggestsChronologically()
+      availArr.forEach( currItem => {
+        this.add(wrkHrs, currItem.rawStartTime, currItem.rawEndTime)
+      })
       return this.get()
     }
 
@@ -87,4 +87,4 @@ class RecordSuggestion {
 
 }
 
-module.exports = RecordSuggestion
+module.exports = CreateSuggestion

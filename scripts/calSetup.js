@@ -26,8 +26,8 @@ const rp = require('request-promise')
 const ical2json = require('ical2json')
 
 const IncomingCommand = require('./calLogic/IncomingCommand.js')
-const RecordAvailability = require('./calLogic/RecordAvailability.js')
-const RecordSuggestion = require('./calLogic/RecordSuggestion.js')
+const CreateAvailability = require('./calLogic/RecordAvailability.js')
+const CreateSuggestion = require('./calLogic/RecordSuggestion.js')
 const Delegator = require('./calLogic/Delegator.js')
 const Time = require('./calLogic/Time.js')
 const Misc = require('./calLogic/Misc.js')
@@ -39,17 +39,28 @@ const Misc = require('./calLogic/Misc.js')
 
 function dayVsWeekAvailLoopAndBuildSuggestions(findAvailResp, Command) {
 
+  let buildDayHeader = (dayOfWeek) => {
+    let dayOfWeekBold = dayOfWeek.format('dddd')
+    let justDate = dayOfWeek.format('LL')
+
+    return `\n *${dayOfWeekBold} ${justDate}*`
+  }
+
+
   let suggestString = ''
   let daySuggestionArr
 
 
   findAvailResp.forEach( dayAvailability => {
 
-    let Suggestion = new RecordSuggestion()
+    let Suggestion = new CreateSuggestion()
 
     if (dayAvailability.arr[0].booked) {
-      let bookedStatement = 'Woof woof! Unfortunatley it looks like your day is fully booked. Try running `@doge cal suggest week` to check your availability for the week.'
-      return bookedStatment
+
+      suggestString += buildDayHeader(moment(dayAvailability.arr[0].booked, 'DD-MM-YYYY HH-mm-ss'))
+
+      suggestString += '\n Ruh ro... Your day is already fully booked. :('
+      return
 
     } else if (dayAvailability.arr[0].dayIsFree) {
 
@@ -60,22 +71,16 @@ function dayVsWeekAvailLoopAndBuildSuggestions(findAvailResp, Command) {
 
     } else {
       daySuggestionArr = Suggestion.generatethreeSemiBusyDay(dayAvailability.arr, dayAvailability.wrkHrs)
-
     }
 
-
-    let dayOfWeek = moment(daySuggestionArr[0].rawStartTime, 'DD-MM-YYYY HH-mm-ss')
-    let dayOfWeekBold = dayOfWeek.format('dddd')
-    let justDate = dayOfWeek.format('LL')
-
-    suggestString = `*${dayOfWeekBold} ${justDate}*`
+    suggestString += buildDayHeader(moment(daySuggestionArr[0].rawStartTime, 'DD-MM-YYYY HH-mm-ss'))
 
     daySuggestionArr.forEach( availWindow => {
 
       suggestString += `\n ${availWindow.localTime}
       ${availWindow.UTC}\n`
-
     })
+
 
   })
 
@@ -116,33 +121,38 @@ const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested, Availabi
   let eventStart = Time.formatDate(wrkHrs.timeZone, currEvent.DTSTART)
   let eventEnd = Time.formatDate(wrkHrs.timeZone, currEvent.DTEND)
 
-  while (eventStart.date() <= dateAvailRequested.date()) {
-    // console.log('same day! rquest', dateAvailRequested)
-    // console.log('same day! start', eventStart)
-    // console.log('same day! end', eventEnd)
+  while (eventStart.isSameOrBefore(dateAvailRequested, 'day')) {
 
-
-    if (eventStart.date() === dateAvailRequested.date()) {
+    if (eventStart.isSame(dateAvailRequested, 'day')) {
       // events that happen on selected day
+      // console.log('----- eventstart', dateAvailRequested)
+      // console.log('----- eventstart', eventStart)
+      // console.log('----- wrkstart', wrkHrs.start)
+      // console.log('eventst and wrksstart is same or before', eventStart.isSameOrBefore(wrkHrs.start,'minutes'));
 
-      if (Time.minutesOfDay(eventStart) <= Time.minutesOfDay(wrkHrs.start)) {
+      if (eventStart.isSameOrBefore(wrkHrs.start,'minutes')) {
         // event start happens before || same time as wrkhrs start
 
-        if (Time.minutesOfDay(eventEnd) <= Time.minutesOfDay(wrkHrs.start)) {
+        // console.log('----- start', eventStart)
+        // console.log('----- end', eventEnd)
+
+        if (eventEnd.isSameOrBefore(wrkHrs.start, 'minutes')) {
           // event end happens before || same time as wrkhrs start
           // the entire event happens before working hours
           // do nothing -> go to next event
-        } else if (Time.minutesOfDay(eventEnd) >= Time.minutesOfDay(wrkHrs.end)) {
+        } else if (eventEnd.isSameOrAfter(wrkHrs.end,'minutes')) {
           // event books out the entire day!
           Availability.wholeDayIsBooked(wrkHrs)
         } else {
+          console.log('should be herrr')
           //event ends during working hours
           Availability.set(wrkHrs, eventEnd)
+          console.log('post of set', Availability.get())
         }
 
       } else { // event start happens after wrkhrs start
 
-        if (Time.minutesOfDay(eventStart) < Time.minutesOfDay(wrkHrs.end)) {
+        if (eventStart.isBefore(wrkHrs.end, 'minutes')) {
 
           // event start happens during work hours
           Availability.set(wrkHrs, eventEnd, eventStart)
@@ -157,6 +167,8 @@ const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested, Availabi
       // console.log('Do nothing event doesnt match day requested')
     }
 
+    Availability.setUntilEndOfWorkDay(wrkHrs)
+
     if (eventArr.length - 1 === i) break
 
     i++
@@ -165,11 +177,8 @@ const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested, Availabi
     eventEnd = Time.formatDate(wrkHrs.timeZone, currEvent.DTEND)
   }
 
-  if (Availability.get().length) {
-    Availability.setUntilEndOfWorkDay(wrkHrs)
-  } else {
+  if (!Availability.get().length) {
     Availability.dayIsFreeAddAvail(wrkHrs, dateAvailRequested)
-    console.log('day is free!')
   }
 
   return {
@@ -236,9 +245,9 @@ module.exports = (robot) => {
 
         msg.reply('Your current Timezone (set at fastmail.com): ' + data.timeZone)
 
-        let Availability = new RecordAvailability()
+        let Availability = new CreateAvailability()
 
-        let wrkHrsInUTC = Time.wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone)
+        let wrkHrsInUTC = Time.wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone, Time.getTodaysDate())
 
         let findAvailPromiseArr = [ new Promise((resolve, reject) => {
               resolve(findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, delegatorObj.datesRequested[0], Availability))
@@ -247,7 +256,9 @@ module.exports = (robot) => {
         if (delegatorObj.datesRequested.length > 1) {
           findAvailPromiseArr = delegatorObj.datesRequested.map( dayToCheck => {
 
-            Availability = new RecordAvailability()
+            let wrkHrsInUTC = Time.wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone, dayToCheck)
+
+            Availability = new CreateAvailability()
 
             return new Promise((resolve,reject) => {
               resolve(findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, dayToCheck, Availability))
@@ -259,16 +270,13 @@ module.exports = (robot) => {
 
           msg.reply(dayVsWeekAvailLoopAndBuildSuggestions(findAvailResp, Command))
 
-          // console.log('dayvsweek return: ',dayVsWeekAvailLoopAndBuildSuggestions(findAvailResp, Command))
-
-
         }).catch(err => {
           console.log('err', err)
         })
 
       }).catch((err)=> {
-        msg.reply('in err')
         console.log('ERROR: ', err)
+        msg.reply('err')
         msg.reply(err)
       })
     }

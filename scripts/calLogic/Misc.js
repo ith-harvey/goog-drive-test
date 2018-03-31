@@ -31,8 +31,7 @@ function buildEventWeek(dayProvided) {
   let day = startOfWorkWeek;
 
   while (day <= endOfWorkWeek) {
-    if (day.date() >= Time.getTodaysDate().date()) {
-
+    if (day.toDate() >= Time.getTodaysDate().toDate()) {
       daysToCheckAvailability.push(moment.utc(day.toDate()));
     }
       day = day.clone().add(1, 'd');

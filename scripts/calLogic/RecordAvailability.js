@@ -4,13 +4,14 @@ const moment = require('moment');
 const Time = require('./Time.js')
 const Misc = require('./Misc.js')
 
-class RecordAvailability {
+class CreateAvailability {
   constructor() {
     this.lastEventEndTime = 'undefined'
     this.availabilityArr = []
   }
 
   set(wrkHrs, eventEnd, eventStart) {
+    console.log('in set');
     if (eventStart === undefined) { //event started before working hours
       this.lastEventEndTime = eventEnd
       return
@@ -29,11 +30,10 @@ class RecordAvailability {
   }
 
   dayIsFreeAddAvail(wrkHrs, dateAvailRequested) {
-    let dateRequestedWrkHrs = Time.chngWrkHrsToDateRequested(wrkHrs, dateAvailRequested)
 
     let dayIsFree = true
 
-    this.add(wrkHrs, dateRequestedWrkHrs.start, dateRequestedWrkHrs.end, dayIsFree)
+    this.add(wrkHrs, wrkHrs.start, wrkHrs.end, dayIsFree)
   }
 
   findAvailability(wrkHrs, eventStart) {
@@ -58,6 +58,7 @@ class RecordAvailability {
   }
 
   add(wrkHrs, availStart, availEnd, dayIsFree) {
+    console.log('making add', dayIsFree);
 
     let availabilityObj = {
       start: `${wrkHrs.timeZone}: ${Time.localTime(availStart, wrkHrs.timeZone)} UTC: ${availStart}`,
@@ -78,4 +79,4 @@ class RecordAvailability {
 
 }
 
-module.exports = RecordAvailability
+module.exports = CreateAvailability
