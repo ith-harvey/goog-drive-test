@@ -248,7 +248,8 @@ module.exports = (robot) => {
         let Availability, wrkHrsInUTC, findAvailPromiseArr
 
           findAvailPromiseArr = delegatorObj.datesRequested.map( dayToCheck => {
-
+            console.log('day to check coming in', dayToCheck);
+            
             wrkHrsInUTC = Time.wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone, dayToCheck)
 
             Availability = new CreateAvailability()
