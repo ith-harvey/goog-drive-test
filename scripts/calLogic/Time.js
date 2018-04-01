@@ -31,7 +31,7 @@ function localTime(time, timeZone) {
 
 function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
 
-  console.log(' /// wrkhrs parse day req', dayRequested);
+  console.log(' /// wrkhrs parse day req', dayRequested)
 
   let start = {
     Hrs: wrkHrs.slice(0, 2),
@@ -55,7 +55,7 @@ function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
     timeZone: timeZone,
   }
 
-  console.log(' /// wrkhrs parse Return obj', returnObj;
+  console.log(' /// wrkhrs parse Return obj', returnObj)
 
   return returnObj
 }
