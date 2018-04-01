@@ -30,8 +30,7 @@ function localTime(time, timeZone) {
 }
 
 function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
-  console.log('wrk Hrs coming in', wrkHrs);
-  console.log(' /// wrkhrs parse day req', dayRequested)
+  console.log('day req coming in', dayRequested)
 
   let start = {
     Hrs: wrkHrs.slice(0, 2),
@@ -43,26 +42,16 @@ function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
     Min: wrkHrs.slice(9, 11),
   }
 
-  dayRequested = moment(dayRequested)
+  let momentSet = (dayReq, startOrEnd) => {
+    dayReq = moment.utc(dayReq).clone()
 
-  let momentSet = (dayReq, startOrEnd)=> {
+    let currUtcOffSet  = momentTZ.tz(dayReq, timeZone)
+    let mdhmsChange = currUtcOffSet.month(dayReq.month()).date(dayReq.date()).hours(startOrEnd.Hrs).minutes(startOrEnd.Min).seconds(00).milliseconds(0)
 
-    // console.log('just month change ', moment(dayReq.tz(timeZone)).month(dayReq.month()));
-    //
-    // console.log('just day change ', moment(dayReq.tz(timeZone)).date(dayReq.date()));
-    //
-    // console.log('post day/month change ', moment(dayReq.tz(timeZone)).month(dayReq.month()).date(dayReq.date()));
+    let utc = moment.utc(mdhmsChange)
 
-
-    // console.log('withoutUTC', dayReq.tz(timeZone).month(dayReq.month()).date(dayReq.date()).hours(startOrEnd.Hrs).minutes(startOrEnd.Min).seconds(00).milliseconds(0))
-    //
-    // console.log('with UTC', moment.utc(dayReq.tz(timeZone).month(dayReq.month()).date(dayReq.date()).hours(startOrEnd.Hrs).minutes(startOrEnd.Min).seconds(00).milliseconds(0)));
-
-    return moment.utc(dayReq.tz(timeZone).month(dayReq.month()).date(dayReq.date()).hours(startOrEnd.Hrs).minutes(startOrEnd.Min).seconds(00).milliseconds(0))
+    return utc
   }
-
-
-  // console.log('tz and hours change',dayRequested.tz(timeZone).month(dayRequested.month()).date(dayRequested.date()).hours(start.Hrs).minutes(start.Min).seconds(00).milliseconds(0));
 
   let returnObj = {
     start: momentSet(dayRequested, start),
@@ -71,7 +60,7 @@ function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
 
     timeZone: timeZone,
   }
-  console.log('wrkHrs leaving', returnObj);
+  // console.log('wrkHrs leaving', returnObj);
 
   return returnObj
 }

@@ -122,10 +122,11 @@ const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested, Availabi
   let eventEnd = Time.formatDate(wrkHrs.timeZone, currEvent.DTEND)
   // console.log('avail req coming in', dateAvailRequested)
   // console.log('wrkHrs coming in', wrkHrs)
+    // console.log('our first event',eventEnd.toDate())
 
-  while (eventStart.isSameOrBefore(dateAvailRequested, 'day')) {
+  while (eventStart.isSameOrBefore(wrkHrs.start, 'day')) {
 
-    if (eventStart.isSame(dateAvailRequested, 'day')) {
+    if (eventStart.isSame(wrkHrs.start, 'day')) {
 
 
       if (eventStart.isSameOrBefore(wrkHrs.start,'minutes')) {
@@ -249,7 +250,7 @@ module.exports = (robot) => {
 
           findAvailPromiseArr = delegatorObj.datesRequested.map( dayToCheck => {
             console.log('day to check coming in', dayToCheck);
-            
+
             wrkHrsInUTC = Time.wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone, dayToCheck)
 
             Availability = new CreateAvailability()
