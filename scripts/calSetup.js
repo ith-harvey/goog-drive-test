@@ -259,6 +259,7 @@ module.exports = (robot) => {
           })
 
         Promise.all(findAvailPromiseArr).then(findAvailResp => {
+          console.log('findAvailReps', findAvailResp)
 
           msg.reply(dayVsWeekAvailLoopAndBuildSuggestions(findAvailResp, Command))
 
