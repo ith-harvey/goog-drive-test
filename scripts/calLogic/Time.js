@@ -44,6 +44,9 @@ function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
   }
 
   console.log('mom day req',moment(dayRequested));
+  console.log('mom day req',moment(dayRequested).tz(timeZone));
+  console.log('tz and hours change',moment(dayRequested).tz(timeZone).hours(start.Hrs)
+  .minutes(start.Min).seconds(00).milliseconds(0));
 
   let returnObj = {
     start: moment(dayRequested).tz(timeZone).hours(start.Hrs)
