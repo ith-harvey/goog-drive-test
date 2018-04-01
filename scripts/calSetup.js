@@ -233,6 +233,8 @@ module.exports = (robot) => {
 
       console.log('wrk HRS', robot.brain.get(msg.message.user.id).workHrs)
 
+      console.log('delg obj', delegatorObj)
+
       rp(robot.brain.get(msg.message.user.id).busyCalUrl)
       .then((response)=> {
 
