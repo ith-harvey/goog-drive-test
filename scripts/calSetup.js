@@ -175,7 +175,7 @@ const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested, Availabi
     Availability.dayIsFreeAddAvail(wrkHrs, dateAvailRequested)
   }
 
-  console.log('what we return out of FIND', Availability.get())
+  // console.log('what we return out of FIND', Availability.get())
 
   return {
     arr: Availability.get(),
@@ -230,8 +230,6 @@ module.exports = (robot) => {
       let Command = new IncomingCommand()
 
       let delegatorObj = Command.interpreter(msg.message.text.split(' '))
-
-      console.log('wrk HRS', robot.brain.get(msg.message.user.id).workHrs)
 
       console.log('delg obj', delegatorObj)
 
