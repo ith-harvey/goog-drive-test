@@ -43,16 +43,18 @@ function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
     Min: wrkHrs.slice(9, 11),
   }
 
-  dayRequested = moment(dayRequested,'YYYY-MM-DD hh:mm:ss T')
+  dayRequested = moment(dayRequested)
 
   let momentSet = (dayReq, startOrEnd)=> {
     console.log('month set', dayReq.month());
     console.log('day set', dayReq.date());
+
+    console.log('post month day set',moment(dayRequested.tz(timeZone)).month(dayReq.month()).date(dayReq.date()));
+
     console.log('withoutUTC', dayReq.tz(timeZone).month(dayReq.month()).date(dayReq.date()).hours(startOrEnd.Hrs).minutes(startOrEnd.Min).seconds(00).milliseconds(0))
 
-      console.log('mom day req',dayRequested.tz(timeZone).month(dayReq.month()).date(dayReq.date()));
-
-
+    console.log('with UTC', moment.utc(dayReq.tz(timeZone).month(dayReq.month()).date(dayReq.date()).hours(startOrEnd.Hrs).minutes(startOrEnd.Min).seconds(00).milliseconds(0)));
+    
     return moment.utc(dayReq.tz(timeZone).month(dayReq.month()).date(dayReq.date()).hours(startOrEnd.Hrs).minutes(startOrEnd.Min).seconds(00).milliseconds(0))
   }
 
@@ -67,7 +69,6 @@ function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
     timeZone: timeZone,
   }
 
-  console.log(' /// wrkhrs parse Return obj', returnObj)
 
   return returnObj
 }
