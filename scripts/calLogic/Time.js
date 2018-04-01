@@ -50,7 +50,7 @@ function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
     console.log('month set', dayReq.month());
     console.log('day set', dayReq.date());
     console.log('manual day and month', dayReq.month(2).date(22));
-    // console.log('postTimezone',moment(dayReq.tz(timeZone)));
+    console.log('postTimezone manual',moment(dayReq.tz(timeZone)).month(2).date(22));
     //
     // console.log('just month change ', moment(dayReq.tz(timeZone)).month(dayReq.month()));
     //
