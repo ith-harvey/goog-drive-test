@@ -48,6 +48,8 @@ function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
   console.log('day requested coming in',dayRequested);
 
   let momentSet = (dayReq, startOrEnd)=> {
+    console.log('month set', dayReq.month());
+    console.log('day set', dayReq.date());
     console.log('withoutUTC', dayReq.tz(timeZone).month(dayReq.month()).date(dayReq.date()).hours(startOrEnd.Hrs).minutes(startOrEnd.Min).seconds(00).milliseconds(0))
 
     return moment.utc(dayReq.tz(timeZone).month(dayReq.month()).date(dayReq.date()).hours(startOrEnd.Hrs).minutes(startOrEnd.Min).seconds(00).milliseconds(0))
@@ -57,9 +59,9 @@ function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
   // console.log('tz and hours change',dayRequested.tz(timeZone).month(dayRequested.month()).date(dayRequested.date()).hours(start.Hrs).minutes(start.Min).seconds(00).milliseconds(0));
 
   let returnObj = {
-    start: momentSet(dayRequested, start),
+    start: momentSet(moment(dayRequested), start),
 
-    end: momentSet(dayRequested, end),
+    end: momentSet(moment(dayRequested), end),
 
     timeZone: timeZone,
   }
