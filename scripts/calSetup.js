@@ -121,8 +121,6 @@ const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested, Availabi
   let eventStart = Time.formatDate(wrkHrs.timeZone, currEvent.DTSTART)
   let eventEnd = Time.formatDate(wrkHrs.timeZone, currEvent.DTEND)
 
-  console.log('find avail requested', dateAvailRequested.toDate())
-
   while (eventStart.isSameOrBefore(dateAvailRequested, 'day')) {
 
     if (eventStart.isSame(dateAvailRequested, 'day')) {
@@ -174,6 +172,8 @@ const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested, Availabi
   if (!Availability.get().length) {
     Availability.dayIsFreeAddAvail(wrkHrs, dateAvailRequested)
   }
+
+  console.log('what we return out of FIND', Availability.get())
 
   return {
     arr: Availability.get(),
