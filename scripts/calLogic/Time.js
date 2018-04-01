@@ -49,14 +49,14 @@ function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
 
     console.log('month set', dayReq.month());
     console.log('day set', dayReq.date());
-
-    console.log('postTimezone',moment(dayReq.tz(timeZone)));
-
-    console.log('just month change ', moment(dayReq.tz(timeZone)).month(dayReq.month()));
-
-    console.log('just day change ', moment(dayReq.tz(timeZone)).date(dayReq.date()));
-
-    console.log('post day/month change ', moment(dayReq.tz(timeZone)).month(dayReq.month()).date(dayReq.date()));
+    console.log('manual day and month', dayReq.month(2).date(22));
+    // console.log('postTimezone',moment(dayReq.tz(timeZone)));
+    //
+    // console.log('just month change ', moment(dayReq.tz(timeZone)).month(dayReq.month()));
+    //
+    // console.log('just day change ', moment(dayReq.tz(timeZone)).date(dayReq.date()));
+    //
+    // console.log('post day/month change ', moment(dayReq.tz(timeZone)).month(dayReq.month()).date(dayReq.date()));
 
 
     // console.log('withoutUTC', dayReq.tz(timeZone).month(dayReq.month()).date(dayReq.date()).hours(startOrEnd.Hrs).minutes(startOrEnd.Min).seconds(00).milliseconds(0))
