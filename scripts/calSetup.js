@@ -52,6 +52,7 @@ function dayVsWeekAvailLoopAndBuildSuggestions(findAvailResp, Command) {
 
 
   findAvailResp.forEach( dayAvailability => {
+    console.log('///////// /////findAvailReps', dayAvailability.arr)
 
     let Suggestion = new CreateSuggestion()
 
@@ -259,7 +260,6 @@ module.exports = (robot) => {
           })
 
         Promise.all(findAvailPromiseArr).then(findAvailResp => {
-          console.log('findAvailReps', findAvailResp)
 
           msg.reply(dayVsWeekAvailLoopAndBuildSuggestions(findAvailResp, Command))
 
