@@ -120,6 +120,8 @@ const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested, Availabi
   let currEvent = eventArr[i]
   let eventStart = Time.formatDate(wrkHrs.timeZone, currEvent.DTSTART)
   let eventEnd = Time.formatDate(wrkHrs.timeZone, currEvent.DTEND)
+  console.log('avail req coming in', dateAvailRequested)
+  console.log('wrkHrs coming in', wrkHrs)
 
   while (eventStart.isSameOrBefore(dateAvailRequested, 'day')) {
 
