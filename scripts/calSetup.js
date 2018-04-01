@@ -227,6 +227,12 @@ module.exports = (robot) => {
 
       let delegatorObj = Command.interpreter(msg.message.text.split(' '))
 
+      console.log('our deleg obj', delegatorObj)
+
+      console.log('busy cal URL', robot.brain.get(msg.message.user.id).busyCalUrl)
+
+      console.log('wrk HRS', robot.brain.get(msg.message.user.id).workHrs)
+
       rp(robot.brain.get(msg.message.user.id).busyCalUrl)
       .then((response)=> {
 
