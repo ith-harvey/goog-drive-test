@@ -52,7 +52,6 @@ function dayVsWeekAvailLoopAndBuildSuggestions(findAvailResp, Command) {
 
 
   findAvailResp.forEach( dayAvailability => {
-    console.log('///////// /////findAvailReps', dayAvailability.arr)
 
     let Suggestion = new CreateSuggestion()
 
@@ -121,6 +120,8 @@ const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested, Availabi
   let currEvent = eventArr[i]
   let eventStart = Time.formatDate(wrkHrs.timeZone, currEvent.DTSTART)
   let eventEnd = Time.formatDate(wrkHrs.timeZone, currEvent.DTEND)
+
+  console.log('find avail requested', dateAvailRequested.toDate())
 
   while (eventStart.isSameOrBefore(dateAvailRequested, 'day')) {
 
@@ -227,10 +228,6 @@ module.exports = (robot) => {
       let Command = new IncomingCommand()
 
       let delegatorObj = Command.interpreter(msg.message.text.split(' '))
-
-      console.log('our deleg obj', delegatorObj)
-
-      console.log('busy cal URL', robot.brain.get(msg.message.user.id).busyCalUrl)
 
       console.log('wrk HRS', robot.brain.get(msg.message.user.id).workHrs)
 
