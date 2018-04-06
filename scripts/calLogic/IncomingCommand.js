@@ -18,7 +18,6 @@ class IncomingCommand {
 
     if (cmdArr.length - 1 === basicQuery) {
       // basic query (not a week, no dates, no extra users)
-      
       DelegatorObject.add('datesRequested', Time.getTodaysDate())
       this.setRequestedQuery(`today, ${Time.getTodaysDate().format('LL')}`)
       return DelegatorObject.get() // just today query
@@ -35,6 +34,7 @@ class IncomingCommand {
         // week query no dates
         let weeksWorkingDaysArr = Misc.setScopeOfWorkWeek(Time.getTodaysDate())
         this.setRequestedQuery('this week')
+        console.log('running week query, no dates', weeksWorkingDaysArr);
         DelegatorObject.add('datesRequested', weeksWorkingDaysArr)
 
         return DelegatorObject.get()

@@ -89,16 +89,6 @@ function dayVsWeekAvailLoopAndBuildSuggestions(findAvailResp, Command) {
 }
 
 
-
-
-
-
-
-
-
-
-
-
 /**
    * findAvailabilityOverTime()
    * @param {Array} eventArr - The event data retreived from fastmail.
@@ -175,8 +165,6 @@ const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested, Availabi
   if (!Availability.get().length) {
     Availability.dayIsFreeAddAvail(wrkHrs, dateAvailRequested)
   }
-
-  // console.log('what we return out of FIND', Availability.get())
 
   return {
     arr: Availability.get(),
