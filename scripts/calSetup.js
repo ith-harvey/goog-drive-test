@@ -22,14 +22,13 @@
 
 const momentTZ = require('moment-timezone');
 const moment = require('moment');
-const rp = require('request-promise')
-const ical2json = require('ical2json')
 
 const IncomingCommand = require('./calLogic/IncomingCommand.js')
 const CreateAvailability = require('./calLogic/RecordAvailability.js')
 const CreateSuggestion = require('./calLogic/RecordSuggestion.js')
 const Delegator = require('./calLogic/Delegator.js')
 const Time = require('./calLogic/Time.js')
+const Merge = require('./calLogic/MergeAvail.js')
 const Misc = require('./calLogic/Misc.js')
 
 
@@ -37,7 +36,8 @@ const Misc = require('./calLogic/Misc.js')
 
 
 
-function dayVsWeekAvailLoopAndBuildSuggestions(findAvailResp, Command) {
+
+function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZone, Command) {
 
   let buildDayHeader = (dayOfWeek) => {
     let dayOfWeekBold = dayOfWeek.format('dddd')
@@ -46,130 +46,44 @@ function dayVsWeekAvailLoopAndBuildSuggestions(findAvailResp, Command) {
     return `\n *${dayOfWeekBold} ${justDate}*`
   }
 
-
   let suggestString = ''
   let daySuggestionArr
 
+  mergedAvailArr.forEach( weekAvailability => {
 
-  findAvailResp.forEach( dayAvailability => {
+    weekAvailability.forEach( dayAvailability => {
 
-    let Suggestion = new CreateSuggestion()
+      let Suggestion = new CreateSuggestion()
 
-    if (dayAvailability.arr[0].booked) {
+      if (dayAvailability[0].dayIsBooked) {
+        suggestString += buildDayHeader(moment(dayAvailability[0].availStart, 'DD-MM-YYYY HH-mm-ss'))
 
-      suggestString += buildDayHeader(moment(dayAvailability.arr[0].booked, 'DD-MM-YYYY HH-mm-ss'))
+        suggestString += '\n Ruh ro... This day is already fully booked. :('
 
-      suggestString += '\n Ruh ro... Your day is already fully booked. :('
-      return
+        return
 
-    } else if (dayAvailability.arr[0].dayIsFree) {
+      } else if (dayAvailability.length === 1) {
+        daySuggestionArr = Suggestion.generateThreeWholeAvail(dayAvailability[0].availStart, dayAvailability[0].availEnd, requestersTimeZone)
 
-      let startWindow = dayAvailability.arr[0].rawStartTime
-      let endWindow = dayAvailability.arr[0].rawEndTime
+      } else {
+        daySuggestionArr = Suggestion.generatethreeSeperatedAvail(dayAvailability, requestersTimeZone)
+      }
 
-      daySuggestionArr = Suggestion.generateThreeFreeDay(startWindow, endWindow, dayAvailability.wrkHrs)
+      suggestString += buildDayHeader(moment(daySuggestionArr[0].rawStartTime, 'DD-MM-YYYY HH-mm-ss'))
 
-    } else {
-      daySuggestionArr = Suggestion.generatethreeSemiBusyDay(dayAvailability.arr, dayAvailability.wrkHrs)
-    }
+      daySuggestionArr.forEach( availWindow => {
 
-    suggestString += buildDayHeader(moment(daySuggestionArr[0].rawStartTime, 'DD-MM-YYYY HH-mm-ss'))
+        suggestString += `\n ${availWindow.localTime}
+        ${availWindow.UTC}\n`
+      })
 
-    daySuggestionArr.forEach( availWindow => {
-
-      suggestString += `\n ${availWindow.localTime}
-      ${availWindow.UTC}\n`
     })
 
+    console.log('suggest string!!!',suggestString );
 
   })
 
   return `Woof woof! Here are some meeting suggestions for ${Command.getRequestedQuery()}: \n \n` + suggestString
-
-}
-
-
-/**
-   * findAvailabilityOverTime()
-   * @param {Array} eventArr - The event data retreived from fastmail.
-   * @param {Object} wrkHrs - Users prefered working hours & timezone
-   *    i.e: {start: XXXX, end: XXXX, timeZone: XXXX}
-   * @param {String} dateAvailRequested - the date the user has requested avail * on
-   * @param {Class} Availability - instance of the RecordAvailability Class
-   *
-   * @returns Nothing - calls Availability.set() method
-**/
-
-/*
-* 1) events that happen on selected day
-*
-*/
-
-const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested, Availability) => {
-  let i = 0
-  let currEvent = eventArr[i]
-  let eventStart = Time.formatDate(wrkHrs.timeZone, currEvent.DTSTART)
-  let eventEnd = Time.formatDate(wrkHrs.timeZone, currEvent.DTEND)
-  // console.log('avail req coming in', dateAvailRequested)
-  // console.log('wrkHrs coming in', wrkHrs)
-    // console.log('our first event',eventEnd.toDate())
-
-  while (eventStart.isSameOrBefore(wrkHrs.start, 'day')) {
-
-    if (eventStart.isSame(wrkHrs.start, 'day')) {
-
-
-      if (eventStart.isSameOrBefore(wrkHrs.start,'minutes')) {
-        // event start happens before || same time as wrkhrs start
-
-        if (eventEnd.isSameOrBefore(wrkHrs.start, 'minutes')) {
-          // event end happens before || same time as wrkhrs start
-          // the entire event happens before working hours
-          // do nothing -> go to next event
-
-        } else if (eventEnd.isSameOrAfter(wrkHrs.end,'minutes')) {
-          // event books out the entire day!
-          Availability.wholeDayIsBooked(wrkHrs)
-
-        } else {
-          //event ends during working hours
-          Availability.set(wrkHrs, eventEnd)
-        }
-
-      } else { // event start happens after wrkhrs start
-
-        if (eventStart.isBefore(wrkHrs.end, 'minutes')) {
-          // event start happens during work hours
-          Availability.set(wrkHrs, eventEnd, eventStart)
-
-        } else {
-          // the entire event happens after working hours
-          // do nothing -> go to next event
-        }
-
-      }
-    } else {
-      // console.log('Do nothing event doesnt match day requested')
-    }
-
-    Availability.setUntilEndOfWorkDay(wrkHrs)
-
-    if (eventArr.length - 1 === i) break
-
-    i++
-    currEvent = eventArr[i]
-    eventStart = Time.formatDate(wrkHrs.timeZone, currEvent.DTSTART)
-    eventEnd = Time.formatDate(wrkHrs.timeZone, currEvent.DTEND)
-  }
-
-  if (!Availability.get().length) {
-    Availability.dayIsFreeAddAvail(wrkHrs, dateAvailRequested)
-  }
-
-  return {
-    arr: Availability.get(),
-    wrkHrs: wrkHrs,
-  }
 }
 
 module.exports = (robot) => {
@@ -184,7 +98,7 @@ module.exports = (robot) => {
   robot.hear(/https/i, function (msg) {
     if (awaitingUrl) {
       let url = msg.message.text.split(' ')[1]
-
+      console.log('user setting URL',msg.message.user);
       robot.brain.set(msg.message.user.id, { busyCalUrl: url })
 
       msg.reply('Woof woof! URL was received... \n \n Excellent, now I need to know your preferred working hours when you will be available for meetings. \n \n Please enter them in 24hr format: <HH:mm>-<HH:mm> (e.g. 09:00-17:00)')
@@ -215,52 +129,51 @@ module.exports = (robot) => {
     if (Misc.checkIfUserIsSetup(robot, msg.message.user.id)) {
       msg.reply('Woof woof! To use the `@doge cal suggest` feature you must first go through the setup wizard. Do so by typing the command `@doge cal setup`.')
     } else {
+        console.log('incoming message : ', msg.message.text);
 
-      let Command = new IncomingCommand()
+        let Command = new IncomingCommand()
+        let delegatorObj = Command.interpreter(robot, msg.message)
 
-      let delegatorObj = Command.interpreter(msg.message.text.split(' '))
+        console.log('delg obj ', delegatorObj)
 
-      console.log('delg obj', delegatorObj)
+        if (delegatorObj.error) return msg.reply(delegatorObj.error)
 
-      rp(robot.brain.get(msg.message.user.id).busyCalUrl)
-      .then((response)=> {
 
-        let output = ical2json.convert(response);
+    let allUsersAvailPromises = delegatorObj.requesterUserIds.map( userId => {
+        return new Promise((resolve, reject) => {
+          resolve(Misc.getIndividualUserAvailability(robot, delegatorObj, userId, Command))
+        })
+      })
 
-        let data = {
-          dateArr: output.VCALENDAR[0].VEVENT,
-          timeZone: output.VCALENDAR[0]['X-WR-TIMEZONE'],
+
+      Promise.all(allUsersAvailPromises).then( allUsersAvail => {
+
+        while (allUsersAvail.length >= 2) {
+          // run cross check with first 2 users info and remove them from arr
+          allUsersAvail.unshift(Merge.availability(allUsersAvail.shift(), allUsersAvail.shift()))
+          // re-add the merged availability and rerun until 1 avail is left
         }
 
-        msg.reply('Your current Timezone (set at fastmail.com): ' + data.timeZone)
+        // console.log('merged set', allUsersAvail);
 
-        let Availability, wrkHrsInUTC, findAvailPromiseArr
+        // allUsersAvail.forEach(thing => {
+        //   thing.forEach( log => {
+        //     console.log('merged set', log);
+        //   })
+        // })
 
-          findAvailPromiseArr = delegatorObj.datesRequested.map( dayToCheck => {
-            console.log('day to check coming in', dayToCheck);
+        msg.reply('Your current Timezone (set at fastmail.com): ' + Command.getTimeZone().requesterTimeZone)
 
-            wrkHrsInUTC = Time.wrkHrsParse(robot.brain.get(msg.message.user.id).workHrs, data.timeZone, dayToCheck)
+        msg.reply(dayVsWeekAvailLoopAndBuildSuggestions(allUsersAvail, Command.getTimeZone().requesterTimeZone, Command))
 
-            Availability = new CreateAvailability()
 
-            return new Promise((resolve,reject) => {
-              resolve(findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, dayToCheck, Availability))
-            })
-          })
 
-        Promise.all(findAvailPromiseArr).then(findAvailResp => {
+        // msg.reply(dayVsWeekAvailLoopAndBuildSuggestions(findAvailResp, Command))
 
-          msg.reply(dayVsWeekAvailLoopAndBuildSuggestions(findAvailResp, Command))
-
-        }).catch(err => {
-          console.log('err', err)
-        })
-
-      }).catch((err)=> {
-        console.log('ERROR: ', err)
-        msg.reply('err')
-        msg.reply(err)
+      }).catch( err => {
+        console.log('master promise err', err);
       })
+
     }
   })
 

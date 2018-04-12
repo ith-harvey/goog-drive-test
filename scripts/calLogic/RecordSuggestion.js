@@ -8,17 +8,51 @@ const Misc = require('./Misc.js')
 class CreateSuggestion {
   constructor() {
     this.suggestionArr = []
+    this.meetingSuggestionLength = 0
   }
 
-  generateThreeFreeDay(timeWindowStart, timeWindowEnd, wrkHrs) {
-    let endTime
+  getMeetingLength() {
+    return this.meetingSuggestionLength
+  }
+
+  setMeetingLength(lengthInMinutes) {
+    this.meetingSuggestionLength = lengthInMinutes
+  }
+
+  generateThreeWholeAvail(timeWindowStart, timeWindowEnd, requestersTimeZone) {
+
+    let endTime, arr
     let dateRequested = timeWindowStart
-    let arr = Misc.randomStartTimesArray(timeWindowStart.hour(), timeWindowEnd.hour(), dateRequested)
+
+    let diff = (start, end) => moment.duration(end.diff(start)).asMinutes()
+
+    let buildAllPossibleStartTimes = (start, end) => {
+      let meetingLeng = 60
+      let arr = []
+      let modStart = moment.utc(start)
+      for (let i = 0; i < (diff(start, end) / meetingLeng); i++ ) {
+        if (i) {
+          arr.push(moment.utc(modStart.add(60, 'm')))
+        } else {
+          arr.push(start)
+         }
+      }
+      return arr
+    }
+
+
+    arr = buildAllPossibleStartTimes(timeWindowStart, timeWindowEnd)
+
+    if (diff(timeWindowStart, timeWindowEnd) > 180) {
+      // if start - end hr diff is 4 or more select at random
+      arr = Misc.selectRandomStartTimes(arr)
+    }
+
 
     arr.forEach(startTime =>  {
 
         endTime = moment(startTime).add(1, 'hours')
-        this.add(wrkHrs, startTime, endTime)
+        this.add(requestersTimeZone, startTime, endTime)
       })
 
     return this.get()
@@ -35,7 +69,28 @@ class CreateSuggestion {
   //   }
   // }
 
-  recurseToFindSuggest(availArr, wrkHrs, currItem, suggestObj) {
+  buildTestSuggestions(availArr, timeZone) {
+
+    let testSuggestions = []
+
+    availArr.forEach( availWindow => {
+
+      let sizeOfAvailWindowInMin =  moment.duration(availWindow.availEnd.diff(availWindow.availStart)).asMinutes()
+      let availabilityStartPoint = availWindow.availStart
+
+      for (let i = 1; i <= (sizeOfAvailWindowInMin / 60); i++) {
+
+        // only create 60 min suggestions
+        testSuggestions.push(this.testAdd(timeZone, availabilityStartPoint, moment(availabilityStartPoint).add(1, 'hours')))
+
+        availabilityStartPoint = moment(availabilityStartPoint).add(1, 'hours') //bump suggestionStartPoint an hour
+      }
+    })
+
+    return testSuggestions
+  }
+
+  recurseToFindSuggest(availArr, timeZone, currItem, suggestObj) {
 
     if (this.suggestionArr.length === 3) {
       return
@@ -45,34 +100,37 @@ class CreateSuggestion {
 
     if (!suggestObj[currItem.rawStartTime]) {
       suggestObj[currItem.rawStartTime] = true
-      this.add(wrkHrs, currItem.rawStartTime, currItem.rawEndTime)
+      this.add(timeZone, currItem.rawStartTime, currItem.rawEndTime)
     }
 
-    return this.recurseToFindSuggest(availArr, wrkHrs, currItem, suggestObj)
+    return this.recurseToFindSuggest(availArr, timeZone, currItem, suggestObj)
   }
 
-  generatethreeSemiBusyDay(availArr, wrkHrs) {
+  generatethreeSeperatedAvail(availArr, timeZone) {
+
+    availArr = this.buildTestSuggestions(availArr, timeZone)
 
     if (availArr.length <= 3) {
-      // could have only one/two/three items in ARR
+      // could have only one/two/three items in availArr
       // this.sortSuggestsChronologically()
       availArr.forEach( currItem => {
-        this.add(wrkHrs, currItem.rawStartTime, currItem.rawEndTime)
+        this.add(timeZone, currItem.rawStartTime, currItem.rawEndTime)
       })
+
       return this.get()
     }
 
-    this.recurseToFindSuggest(availArr, wrkHrs, '', {})
+    this.recurseToFindSuggest(availArr, timeZone, '', {})
     // this.sortSuggestsChronologically()
 
     return this.get()
   }
 
-  add(wrkHrs, availStart, availEnd) {
+  add(timeZone, availStart, availEnd) {
 
     this.suggestionArr.push({
 
-      localTime: `${wrkHrs.timeZone}: ${moment(Time.localTime(availStart, wrkHrs.timeZone), 'DD-MM-YYYY hh:mm:ss a').format("hh:mm:ss a")} - ${moment(Time.localTime(availEnd, wrkHrs.timeZone), 'DD-MM-YYYY hh:mm:ss a').format("hh:mm:ss a")}`,
+      localTime: `${timeZone}: ${moment(Time.localTime(availStart, timeZone), 'DD-MM-YYYY hh:mm:ss a').format("hh:mm:ss a")} - ${moment(Time.localTime(availEnd, timeZone), 'DD-MM-YYYY hh:mm:ss a').format("hh:mm:ss a")}`,
 
       UTC: `UTC: ${availStart} - ${availEnd}`,
 
@@ -80,6 +138,19 @@ class CreateSuggestion {
 
       rawEndTime: availEnd,
     })
+  }
+
+  testAdd(timeZone, availStart, availEnd) {
+    return {
+
+      localTime: `${timeZone}: ${moment(Time.localTime(availStart, timeZone), 'DD-MM-YYYY hh:mm:ss a').format("hh:mm:ss a")} - ${moment(Time.localTime(availEnd, timeZone), 'DD-MM-YYYY hh:mm:ss a').format("hh:mm:ss a")}`,
+
+      UTC: `UTC: ${availStart} - ${availEnd}`,
+
+      rawStartTime: availStart,
+
+      rawEndTime: availEnd,
+    }
 
   }
 

@@ -11,6 +11,7 @@ class CreateAvailability {
   }
 
   set(wrkHrs, eventEnd, eventStart) {
+    // console.log('set until end of work day', wrkHrs);
     if (eventStart === undefined) { //event started before working hours
       this.lastEventEndTime = eventEnd
       return
@@ -20,55 +21,37 @@ class CreateAvailability {
       // first event that day && there is gap time between wrkHrs start and eventStart
       this.lastEventEndTime = wrkHrs.start
     }
-    this.findAvailability(wrkHrs, eventStart)
+
+    // this.findAvailability(wrkHrs, eventStart)
+
+    this.add(this.lastEventEndTime, eventStart)
+
     this.lastEventEndTime = eventEnd
   }
 
   setUntilEndOfWorkDay(wrkHrs) {
-    this.findAvailability(wrkHrs, wrkHrs.end)
+    // console.log('set until end of work day', wrkHrs);
+    this.add(this.lastEventEndTime, wrkHrs.end)
   }
 
-  dayIsFreeAddAvail(wrkHrs, dateAvailRequested) {
-
-    let dayIsFree = true
-
-    this.add(wrkHrs, wrkHrs.start, wrkHrs.end, dayIsFree)
-  }
-
-  findAvailability(wrkHrs, eventStart) {
-    let availTime =  moment.duration(eventStart.diff(this.lastEventEndTime)).asMinutes()
-
-    let availabilityStartPoint = this.lastEventEndTime
-
-    for (let i = 1; i <= (availTime / 60); i++) {
-      // only create 60 min suggestions
-
-      this.add(wrkHrs, availabilityStartPoint, moment(availabilityStartPoint).add(1, 'hours'))
-
-      availabilityStartPoint = moment(availabilityStartPoint).add(1, 'hours') //bump suggestionStartPoint an hour
-    }
+  dayIsFreeAddAvail(wrkHrs) {
+    // console.log('day is free adda vil', wrkHrs);
+    this.add(wrkHrs.start, wrkHrs.end, 'dayIsFree')
   }
 
   wholeDayIsBooked(wrkHrs) {
-    this.availabilityArr.push({
-      booked: wrkHrs.start,
-      bookedMsg: 'day is completely booked',
-    })
+    this.add(wrkHrs.start, wrkHrs.end, 'dayIsBooked')
   }
 
-  add(wrkHrs, availStart, availEnd, dayIsFree) {
-
+  add (availStart, availEnd, dayIsFreeOrBooked) {
+    // console.log('problem is here', availStart);
     let availabilityObj = {
-      start: `${wrkHrs.timeZone}: ${Time.localTime(availStart, wrkHrs.timeZone)} UTC: ${availStart}`,
+      availStart: availStart,
 
-      end: `${wrkHrs.timeZone}: ${Time.localTime(availEnd, wrkHrs.timeZone)} UTC: ${availEnd}`,
-
-      rawStartTime: availStart,
-
-      rawEndTime: availEnd,
+      availEnd: availEnd,
     }
 
-    if (dayIsFree) availabilityObj.dayIsFree = true
+    if (dayIsFreeOrBooked) availabilityObj[dayIsFreeOrBooked] = true
 
     this.availabilityArr.push(availabilityObj)
   }

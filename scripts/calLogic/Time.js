@@ -24,13 +24,11 @@ function formatDate(timeZone, icalStr) {
 }
 
 function localTime(time, timeZone) {
-
   let timeClone = moment(time).clone()
   return timeClone.tz(timeZone).format('DD-MM-YYYY hh:mm:ss a')
 }
 
 function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
-  console.log('day req coming in', dayRequested)
 
   let start = {
     Hrs: wrkHrs.slice(0, 2),
@@ -64,19 +62,6 @@ function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
 
   return returnObj
 }
-
-// function chngWrkHrsToDateRequested(wrkHrs, dateAvailRequested) {
-//
-//   return {
-//     start: moment.utc(dateAvailRequested).hours(wrkHrs.start.hours())
-//     .minutes(wrkHrs.start.minutes()),
-//
-//     end: moment.utc(dateAvailRequested).hours(wrkHrs.end.hours())
-//     .minutes(wrkHrs.end.minutes()),
-//
-//     timeZone: wrkHrs.timeZone,
-//   }
-// }
 
 module.exports = {
   getTodaysDate,
