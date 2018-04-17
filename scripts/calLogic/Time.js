@@ -41,9 +41,10 @@ function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
   }
 
   let momentSet = (dayReq, startOrEnd) => {
-    dayReq = moment.utc(dayReq).clone()
+    // dayReq = moment.utc(dayReq).clone()
 
-    let currUtcOffSet  = momentTZ.tz(dayReq, timeZone)
+    let currUtcOffSet = momentTZ.tz(dayReq, timeZone)
+
     let mdhmsChange = currUtcOffSet.month(dayReq.month()).date(dayReq.date()).hours(startOrEnd.Hrs).minutes(startOrEnd.Min).seconds(00).milliseconds(0)
 
     let utc = moment.utc(mdhmsChange)

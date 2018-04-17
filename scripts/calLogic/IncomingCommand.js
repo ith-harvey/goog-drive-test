@@ -1,17 +1,18 @@
 
 const rp = require('request-promise');
-
+const momentTZ = require('moment-timezone');
+const moment = require('moment');
 
 const ical2json = require('ical2json')
-const Delegator = require('./Delegator')
+const User = require('./User')
 const Time = require('./Time.js')
-const Misc = require('./Misc.js')
 
 class IncomingCommand {
 
   constructor() {
     this.timeFrameRequested = ''
-    this.DelegatorObject = ''
+    this.arrayOfUsers = ''
+    this.queryParsable = []
   }
 
   monthQuery (text) {
@@ -19,26 +20,25 @@ class IncomingCommand {
     return regExp.test(text)
   }
 
-  setTimeZone(timeZone) {
-    this.DelegatorObject.add('requesterTimeZone', timeZone)
-  }
-
   interpreter (robot, message) {
 
     let cmdArr = message.text.split(' ')
 
-    this.DelegatorObject = new Delegator()
+    this.arrayOfUsers = new User.UserArray()
+
     let basicQuery = cmdArr.indexOf('suggest')
 
     // this.DelegatorObject.add('meetingLengthInMinutes', 60)
-    this.DelegatorObject.add('requesterUserIds', message.user.id)
+    this.arrayOfUsers.addUser(new User.Individual(message.user.id))
+
 
     if (cmdArr.length - 1 === basicQuery) {
-      return this.dayQueryNoDates()
+      this.saveQueryParsable('DayQueryNoDates')
+      return this.arrayOfUsers.get()
     }
 
     if (cmdArr[basicQuery + 1][0] === '@') {
-      // adding users to query
+      // run when additional users are added to a query
       let uNamePosition = basicQuery + 1
       let userIdArr = []
       let currUser = cmdArr[uNamePosition]
@@ -50,36 +50,41 @@ class IncomingCommand {
           return this.errorHandler('Ruh ro, either the user you have requested has not run the `@doge cal suggest setup` wizard or that user does not exist! For now try running a query without ' + currUser + '\'s username.')
         }
 
-        this.DelegatorObject.add('requesterUserIds', robot.brain.usersForFuzzyName(currUser)[0].id)
-
+        this.arrayOfUsers.addUser(new User.Individual(robot.brain.usersForFuzzyName(currUser)[0].id))
         uNamePosition ++
         currUser = cmdArr[uNamePosition]
       }
 
       if (!currUser) {
-        return this.dayQueryNoDates()
+        // day query, with users - no dates
+        this.saveQueryParsable('DayQueryNoDates')
+        return this.arrayOfUsers.get()
       }
 
-      cmdArr = cmdArr.splice(uNamePosition, cmdArr.length)
-      return this.dateInterpreter(cmdArr)
+      // week query, with users - no dates?
+      this.saveQueryParsable(cmdArr.splice(uNamePosition, cmdArr.length))
+      return this.arrayOfUsers.get()
 
     }
 
-    return this.dateInterpreter(cmdArr.splice(basicQuery + 1, cmdArr.length))
+    // week query, no additional users, no dates?
+    this.saveQueryParsable(cmdArr.splice(basicQuery + 1, cmdArr.length))
+    return this.arrayOfUsers.get()
 
   }
 
-  dateInterpreter(cmdArr) {
-    if (cmdArr[0] === 'week') {
+  dateInterpreter(User, todaysDate) {
+    let cmd = this.queryParsable
+    if (cmd[0] === 'week') {
 
-      if (cmdArr.length === 1) {
-        return this.weekQueryNoDates(cmdArr)
-      } else if (cmdArr.length === 3) {
-        return this.weekQueryWithDates(cmdArr[1], cmdArr[2])
+      if (cmd.length === 1) {
+        return this.weekQueryNoDates(User, todaysDate)
+      } else if (cmd.length === 3) {
+        return this.weekQueryWithDates(User, cmd[1], cmd[2])
       }
 
-    } else if (this.monthQuery(cmdArr[0])) {
-      return this.dayQueryWithDates(cmdArr[0], cmdArr[1])
+    } else if (this.monthQuery(cmd[0])) {
+      return this.dayQueryWithDates(User, cmd[0], cmd[1])
     }
   }
 
@@ -96,61 +101,86 @@ class IncomingCommand {
     return this.timeFrameRequested
   }
 
-  weekQueryWithDates(month, day) {
+  weekQueryWithDates(User, month, day) {
     // week query with dates
     let dateRequested = Time.interpDate(month, day)
 
-    let weeksWorkingDaysArr = Misc.setScopeOfWorkWeek(dateRequested)
+    let weeksWorkingDaysArr = this.setScopeOfWorkWeek(dateRequested)
 
     //if Query is weekend return error msg
     if (weeksWorkingDaysArr.err) return this.errorHandler(weeksWorkingDaysArr.err)
 
     this.setRequestedQuery(`week of ${dateRequested.format('LL')}`)
-    this.DelegatorObject.add('datesRequested', weeksWorkingDaysArr)
+    weeksWorkingDaysArr.forEach( date => User.add('datesRequested', date))
 
-    return this.DelegatorObject.get()
+    return User.get()
   }
 
-  weekQueryNoDates() {
+  weekQueryNoDates(User, todaysDate) {
     // week query no dates
-    let weeksWorkingDaysArr = Misc.setScopeOfWorkWeek(Time.getTodaysDate())
+    let weeksWorkingDaysArr = this.setScopeOfWorkWeek(todaysDate)
 
     if (weeksWorkingDaysArr.err) return this.errorHandler(weeksWorkingDaysArr.err)
 
     this.setRequestedQuery('this week')
+    weeksWorkingDaysArr.forEach( date => User.add('datesRequested', date))
 
-    this.DelegatorObject.add('datesRequested', weeksWorkingDaysArr)
-
-    return this.DelegatorObject.get()
+    return User.get()
   }
 
-  dayQueryNoDates() {
-    console.log('/// ///// what day it is!',Time.getTodaysDate());
+  dayQueryNoDates(IndividualUser, todaysDate) {
     // day query without dates
-    this.DelegatorObject.add('datesRequested', Time.getTodaysDate())
+    IndividualUser.add('datesRequested', todaysDate)
 
-    this.setRequestedQuery(`today, ${Time.getTodaysDate().format('LL')}`)
-
-    return this.DelegatorObject.get()
+    this.setRequestedQuery(`today, ${todaysDate.format('LL')}`)
   }
 
-  dayQueryWithDates(month, day) {
+  saveQueryParsable(query) {
+    if (typeof query === 'string') {
+      this.queryParsable.push(query)
+      return
+    }
+    this.queryParsable = query
+  }
+
+
+  dayQueryWithDates(User, month, day) {
     // day query with dates
     let dateRequested = Time.interpDate(month, day)
 
-    this.DelegatorObject.add('datesRequested', dateRequested)
+    User.add('datesRequested', dateRequested)
 
     this.setRequestedQuery(`${dateRequested.format('LL')}`)
 
-    return this.DelegatorObject.get()
+    return User.get()
   }
 
-  getTimeZone() {
-    return this.DelegatorObject.get()
+  buildEventWeek(dayProvided) {
+    let startOfWorkWeek = moment(dayProvided).startOf('isoWeek');
+    let endOfWorkWeek = moment(dayProvided).endOf('isoWeek').subtract(2, 'days')
+
+    let daysToCheckAvailability = [];
+    let day = startOfWorkWeek;
+
+    // possible error here Time.getTodaysDate() is used...
+
+    while (day <= endOfWorkWeek) {
+      if (day.isSameOrAfter(Time.getTodaysDate(), 'day')) {
+        daysToCheckAvailability.push(moment.utc(day.toDate()));
+      }
+        day = day.clone().add(1, 'd');
+    }
+    return daysToCheckAvailability
   }
 
+  setScopeOfWorkWeek(dayProvided) {
+    if (1 <= dayProvided.isoWeekday() && dayProvided.isoWeekday() <= 5 ) {
+      return this.buildEventWeek(dayProvided)
 
-
+    } else if (6 === dayProvided.isoWeekday() || dayProvided.isoWeekday() === 7) {
+      return { err: 'Woof woof! I don\'t support week queries that land on weekend dates. To retrieve weekend meeting suggestions please use the single day query: `@doge cal suggest <users(optional)> <month> <day>`.'}
+    }
+  }
 
 }
 

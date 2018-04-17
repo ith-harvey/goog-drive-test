@@ -40,7 +40,6 @@ class CreateSuggestion {
       return arr
     }
 
-
     arr = buildAllPossibleStartTimes(timeWindowStart, timeWindowEnd)
 
     if (diff(timeWindowStart, timeWindowEnd) > 180) {
@@ -48,12 +47,10 @@ class CreateSuggestion {
       arr = Misc.selectRandomStartTimes(arr)
     }
 
-
     arr.forEach(startTime =>  {
-
-        endTime = moment(startTime).add(1, 'hours')
-        this.add(requestersTimeZone, startTime, endTime)
-      })
+      endTime = moment(startTime).add(1, 'hours')
+      this.add(requestersTimeZone, startTime, endTime)
+    })
 
     return this.get()
   }
@@ -74,7 +71,7 @@ class CreateSuggestion {
     let testSuggestions = []
 
     availArr.forEach( availWindow => {
-
+      console.log('curr avail Wind', availWindow);
       let sizeOfAvailWindowInMin =  moment.duration(availWindow.availEnd.diff(availWindow.availStart)).asMinutes()
       let availabilityStartPoint = availWindow.availStart
 
@@ -86,7 +83,6 @@ class CreateSuggestion {
         availabilityStartPoint = moment(availabilityStartPoint).add(1, 'hours') //bump suggestionStartPoint an hour
       }
     })
-
     return testSuggestions
   }
 
@@ -106,8 +102,8 @@ class CreateSuggestion {
     return this.recurseToFindSuggest(availArr, timeZone, currItem, suggestObj)
   }
 
-  generatethreeSeperatedAvail(availArr, timeZone) {
-
+  generateThreeSeperatedAvail(availArr, timeZone) {
+    console.log('we in herr?');
     availArr = this.buildTestSuggestions(availArr, timeZone)
 
     if (availArr.length <= 3) {

@@ -2,15 +2,14 @@
 const momentTZ = require('moment-timezone');
 const moment = require('moment');
 const rp = require('request-promise');
-const ical2json = require('ical2json')
-const CreateAvailability = require('./RecordAvailability.js')
+const ical2json = require('ical2json');
+const CreateAvailability = require('./RecordAvailability.js');
 
 const Time = require('./Time.js');
 
 
-
 /**
-   * findAvailabilityOverTime()
+   * findAvailability()
    * @param {Array} eventArr - The event data retreived from fastmail.
    * @param {Object} wrkHrs - Users prefered working hours & timezone
    *    i.e: {start: XXXX, end: XXXX, timeZone: XXXX}
@@ -20,15 +19,14 @@ const Time = require('./Time.js');
    * @returns Nothing - calls Availability.set() method
 **/
 
-const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested, Availability) => {
-
+const findAvailability = (eventArr, wrkHrs, dateAvailRequested, Availability) => {
   let i = 0
   let currEvent = eventArr[i]
   let eventStart, eventEnd
 
-    // using function to compare event to wrkingHours
-    eventStart = Time.formatDate(wrkHrs.timeZone, currEvent.DTSTART)
-    eventEnd = Time.formatDate(wrkHrs.timeZone, currEvent.DTEND)
+  // using function to compare event to workingHours
+  eventStart = Time.formatDate(wrkHrs.timeZone, currEvent.DTSTART)
+  eventEnd = Time.formatDate(wrkHrs.timeZone, currEvent.DTEND)
 
   while (eventStart.isSameOrBefore(wrkHrs.start, 'day')) {
 
@@ -79,11 +77,12 @@ const findAvailabilityOverTime = (eventArr, wrkHrs, dateAvailRequested, Availabi
   }
 
   if (Availability.lastEventEndTime !== 'undefined') {
-    // no events have been set
+    // an event has been set add more availability till end of day
     Availability.setUntilEndOfWorkDay(wrkHrs)
   }
 
   if (!Availability.get().length) {
+    // no events have been set
     Availability.dayIsFreeAddAvail(wrkHrs)
   }
 
@@ -109,32 +108,6 @@ function checkIfUserIsSetup(robot, userId) {
   }
 
   return false // user is already setup for cal suggest feature
-}
-
-function buildEventWeek(dayProvided) {
-  let startOfWorkWeek = moment(dayProvided).startOf('isoWeek');
-  let endOfWorkWeek = moment(dayProvided).endOf('isoWeek').subtract(2, 'days')
-
-  let daysToCheckAvailability = [];
-  let day = startOfWorkWeek;
-
-  while (day <= endOfWorkWeek) {
-    if (day.isSameOrAfter(Time.getTodaysDate(), 'day')) {
-      daysToCheckAvailability.push(moment.utc(day.toDate()));
-    }
-      day = day.clone().add(1, 'd');
-  }
-  return daysToCheckAvailability
-}
-
-function setScopeOfWorkWeek(dayProvided) {
-  if (1 <= dayProvided.isoWeekday() && dayProvided.isoWeekday() <= 5 ) {
-    return buildEventWeek(dayProvided)
-
-  } else if (6 === dayProvided.isoWeekday() || dayProvided.isoWeekday() === 7) {
-
-    return { err: 'Woof woof! I don\'t support week queries that land on weekend dates. To retrieve weekend meeting suggestions please use the single day query: `@doge cal suggest <users(optional)> <month> <day>`.'}
-  }
 }
 
 function selectRandomStartTimes(startTimesArr) {
@@ -170,66 +143,32 @@ function selectRandomStartTimes(startTimesArr) {
 }
 
 
+function completeUserInformation(robot, userInfoArr, UserArray, Command) {
 
+  UserArray.arr.forEach( (User, i) => {
 
+  let output = ical2json.convert(userInfoArr[i]);
 
-function getIndividualUserAvailability(robot, delegatorObj, userId, Command) {
+  if (!output.VCALENDAR[0].VEVENT) {
+    console.log(' //// ERROR! no events in this persons calendar!!! You can book anything! /// ')
+  }
 
-  return rp(robot.brain.get(userId).busyCalUrl)
-  .then((response)=> {
+  let data = {
+    eventArr: output.VCALENDAR[0].VEVENT,
+    timeZone: output.VCALENDAR[0]['X-WR-TIMEZONE'],
+  }
 
-    let output = ical2json.convert(response);
+  User.add('timeZone', data.timeZone).add('calBusyArr', data.eventArr).setDatesRequested(momentTZ().tz(data.timeZone), Command)
 
-
-    if (!output.VCALENDAR[0].VEVENT) {
-      console.log(' //// ERROR! no events in this persons calendar!!! You can book anything! /// ')
-    }
-
-    let data = {
-      dateArr: output.VCALENDAR[0].VEVENT,
-      timeZone: output.VCALENDAR[0]['X-WR-TIMEZONE'],
-    }
-
-    if (delegatorObj.requesterUserIds[0] === userId) {
-      // if first requester's id -> set requesters timezone
-      Command.setTimeZone(data.timeZone)
-    }
-
-    let Availability, wrkHrsInUTC, findAvailPromiseArr
-
-    findAvailPromiseArr = delegatorObj.datesRequested.map( dayToCheck => {
-
-      wrkHrsInUTC = Time.wrkHrsParse(robot.brain.get(userId).workHrs, data.timeZone, dayToCheck)
-
-
-      Availability = new CreateAvailability()
-
-      return new Promise((resolve, reject) => {
-        resolve(findAvailabilityOverTime(data.dateArr, wrkHrsInUTC, dayToCheck, Availability))
-      })
-    })
-
-    return Promise.all(findAvailPromiseArr).then(findAvailResp => {
-
-      return findAvailResp
-
-    }).catch(err => {
-      console.log('err', err)
-      return err
-    })
-
-  }).catch((err)=> {
-    console.log('ERROR: ', err)
-    return err
   })
+
+  return UserArray.get()
 
 }
 
 module.exports = {
   selectRandomStartTimes,
   checkIfUserIsSetup,
-  buildEventWeek,
-  setScopeOfWorkWeek,
-  getIndividualUserAvailability,
-  findAvailabilityOverTime,
+  findAvailability,
+  completeUserInformation
 }

@@ -11,7 +11,6 @@ class CreateAvailability {
   }
 
   set(wrkHrs, eventEnd, eventStart) {
-    // console.log('set until end of work day', wrkHrs);
     if (eventStart === undefined) { //event started before working hours
       this.lastEventEndTime = eventEnd
       return
@@ -21,8 +20,6 @@ class CreateAvailability {
       // first event that day && there is gap time between wrkHrs start and eventStart
       this.lastEventEndTime = wrkHrs.start
     }
-
-    // this.findAvailability(wrkHrs, eventStart)
 
     this.add(this.lastEventEndTime, eventStart)
 
@@ -47,7 +44,6 @@ class CreateAvailability {
     // console.log('problem is here', availStart);
     let availabilityObj = {
       availStart: availStart,
-
       availEnd: availEnd,
     }
 

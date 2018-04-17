@@ -10,6 +10,7 @@ const CreateAvailability = require('./RecordAvailability.js')
 class Merge {
 
   static determLongerAvailWindows(arr1, arr2) {
+
     if (arr1.length > arr2.length) {
       return arr1.length
     } else {
@@ -21,21 +22,47 @@ class Merge {
 
     let mergedAvailArr = []
 
-    for (let i = 0; i < user1.length; i++) {
+    // PROBLEM IS HERE
 
-      let largerNumOfAvailWindows = this.determLongerAvailWindows(user1[i], user2[i])
+    if (user1[0][0] === undefined) {
+      console.log('in availability day');
+      // only have a day to merge Availability for
+
+      let largerNumOfAvailWindows = this.determLongerAvailWindows(user1, user2)
 
       let Availability = new CreateAvailability()
 
-      let compare = this.prepEventsForComparison(largerNumOfAvailWindows, user1[i][0], user1[i], user2[i][0], user2[i])
+      // issue here in day vs week. Day doesn't have the extra array where as week will....
+      let compare = this.prepEventsForComparison(largerNumOfAvailWindows, user1[0], user1, user2[0], user2)
 
-      mergedAvailArr.push(this.compareAvailability(compare, Availability))
+      return this.compareAvailability(compare, Availability)
+
+    } else {
+      // Have a week to merge Availability for
+      console.log('running availability week');
+
+      for (let i = 0; i < user1.length; i++) {
+
+        let largerNumOfAvailWindows = this.determLongerAvailWindows(user1[i], user2[i])
+
+        let Availability = new CreateAvailability()
+
+        // issue here in day vs week. Day doesn't have the extra array where as week will....
+        let compare = this.prepEventsForComparison(largerNumOfAvailWindows, user1[i][0], user1[i], user2[i][0], user2[i])
+
+        mergedAvailArr.push(this.compareAvailability(compare, Availability))
+      }
+
+      return mergedAvailArr
     }
 
-    return mergedAvailArr
   }
 
-  static prepEventsForComparison(largerNumOfAvailWindows, user1FirstWindow, user1EventArr, user2FirstWindow, user2EventArr, Availability) {
+  static prepEventsForComparison(largerNumOfAvailWindows, user1FirstWindow, user1EventArr, user2FirstWindow, user2EventArr) {
+    // console.log('in prep events', user1FirstWindow);
+    // console.log('in prep events', user2FirstWindow);
+    // console.log('in prep events', user1EventArr);
+    // console.log('in prep events', user2EventArr);
 
     function buildCompare (windowToUse, additionalParam) {
       let returnObj = {
@@ -56,8 +83,10 @@ class Merge {
         compare.user1Event = buildCompare(user1FirstWindow, 'dayIsFree')
         compare.user2Event = buildCompare(user2FirstWindow, 'dayIsFree')
 
+
       } else if (user1FirstWindow.dayIsBooked || user2FirstWindow.dayIsBooked) {
         // both days are entirely Booked -> run comparison
+
         compare.user1Event = buildCompare(user1FirstWindow, 'dayIsBooked')
         compare.user2Event = buildCompare(user2FirstWindow, 'dayIsBooked')
 
@@ -86,6 +115,7 @@ class Merge {
     let mergeEventToPush = {}
 
     for (let j = 0; j < compareArr.length; j++) {
+
       let user1Ev = compareArr[j].user1Event
       let user2Ev = compareArr[j].user2Event
 
@@ -105,7 +135,7 @@ class Merge {
       if (user1Ev.end.isSameOrBefore(user2Ev.end, 'minutes')) {
         mergeEventToPush.end = user1Ev.end
       } else if (user1Ev.end.isSameOrAfter(user2Ev.end, 'minutes')) {
-        mergeEventToPush.start = user2Ev.end
+        mergeEventToPush.end = user2Ev.end
       }
 
       Availability.add(mergeEventToPush.start, mergeEventToPush.end)

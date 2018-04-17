@@ -23,21 +23,37 @@
 const momentTZ = require('moment-timezone');
 const moment = require('moment');
 
+
+const rp = require('request-promise');
 const IncomingCommand = require('./calLogic/IncomingCommand.js')
 const CreateAvailability = require('./calLogic/RecordAvailability.js')
 const CreateSuggestion = require('./calLogic/RecordSuggestion.js')
-const Delegator = require('./calLogic/Delegator.js')
+const User = require('./calLogic/User.js')
 const Time = require('./calLogic/Time.js')
 const Merge = require('./calLogic/MergeAvail.js')
 const Misc = require('./calLogic/Misc.js')
 
+function setupFindAvailability(robot, UserArray ) {
+  let allUsersAvailability = []
 
+  UserArray.arr.forEach( (User, i) => {
+    // loop over each user
 
+    allUsersAvailability.push( User.datesRequested.map( (dayToCheck) => {
 
+      let wrkHrsInUTC = Time.wrkHrsParse(robot.brain.get(User.userId).workHrs, User.timeZone, dayToCheck)
 
+      let Availability = new CreateAvailability()
 
+      // findAvailOverTime -> requires the entire event arr for that person
+      return Misc.findAvailability(User.calBusyArr, wrkHrsInUTC, dayToCheck, Availability)
+      }))
+  })
 
-function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZone, Command) {
+  return allUsersAvailability
+}
+
+function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZone, requestersDatesRequested, Command) {
 
   let buildDayHeader = (dayOfWeek) => {
     let dayOfWeekBold = dayOfWeek.format('dddd')
@@ -51,36 +67,31 @@ function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZon
 
   mergedAvailArr.forEach( weekAvailability => {
 
-    weekAvailability.forEach( dayAvailability => {
+    weekAvailability.forEach( (dayAvailability, i) => {
 
       let Suggestion = new CreateSuggestion()
 
       if (dayAvailability[0].dayIsBooked) {
-        suggestString += buildDayHeader(moment(dayAvailability[0].availStart, 'DD-MM-YYYY HH-mm-ss'))
-
+        suggestString += buildDayHeader(requestersDatesRequested[i])
         suggestString += '\n Ruh ro... This day is already fully booked. :('
-
         return
 
       } else if (dayAvailability.length === 1) {
+        //run if the day's availability is 'whole' (not broken up)
         daySuggestionArr = Suggestion.generateThreeWholeAvail(dayAvailability[0].availStart, dayAvailability[0].availEnd, requestersTimeZone)
 
       } else {
-        daySuggestionArr = Suggestion.generatethreeSeperatedAvail(dayAvailability, requestersTimeZone)
+        //run if the day's availability is 'broken up' (busy in the middle of the day)
+        daySuggestionArr = Suggestion.generateThreeSeperatedAvail(dayAvailability, requestersTimeZone)
       }
 
-      suggestString += buildDayHeader(moment(daySuggestionArr[0].rawStartTime, 'DD-MM-YYYY HH-mm-ss'))
-
+      suggestString += buildDayHeader(requestersDatesRequested[i])
       daySuggestionArr.forEach( availWindow => {
-
         suggestString += `\n ${availWindow.localTime}
         ${availWindow.UTC}\n`
       })
 
     })
-
-    console.log('suggest string!!!',suggestString );
-
   })
 
   return `Woof woof! Here are some meeting suggestions for ${Command.getRequestedQuery()}: \n \n` + suggestString
@@ -132,47 +143,56 @@ module.exports = (robot) => {
         console.log('incoming message : ', msg.message.text);
 
         let Command = new IncomingCommand()
-        let delegatorObj = Command.interpreter(robot, msg.message)
+        let UserArray = Command.interpreter(robot, msg.message)
 
-        console.log('delg obj ', delegatorObj)
+        if (UserArray.error) {
+          console.log('error', error);
+          return msg.reply(delegatorObj.error)
+          }
 
-        if (delegatorObj.error) return msg.reply(delegatorObj.error)
+        let userInfoPromiseArr = UserArray.arr.map( user => {
+              return new Promise( (resolve, reject) => {
+                resolve(rp(robot.brain.get(user.userId).busyCalUrl))
+            })
+          })
 
+          Promise.all(userInfoPromiseArr).then( userInfoArr => {
+            let response = []
 
-    let allUsersAvailPromises = delegatorObj.requesterUserIds.map( userId => {
-        return new Promise((resolve, reject) => {
-          resolve(Misc.getIndividualUserAvailability(robot, delegatorObj, userId, Command))
-        })
-      })
+            UserArray = Misc.completeUserInformation(robot, userInfoArr, UserArray, Command)
 
-
-      Promise.all(allUsersAvailPromises).then( allUsersAvail => {
-
-        while (allUsersAvail.length >= 2) {
-          // run cross check with first 2 users info and remove them from arr
-          allUsersAvail.unshift(Merge.availability(allUsersAvail.shift(), allUsersAvail.shift()))
-          // re-add the merged availability and rerun until 1 avail is left
-        }
-
-        // console.log('merged set', allUsersAvail);
-
-        // allUsersAvail.forEach(thing => {
-        //   thing.forEach( log => {
-        //     console.log('merged set', log);
-        //   })
-        // })
-
-        msg.reply('Your current Timezone (set at fastmail.com): ' + Command.getTimeZone().requesterTimeZone)
-
-        msg.reply(dayVsWeekAvailLoopAndBuildSuggestions(allUsersAvail, Command.getTimeZone().requesterTimeZone, Command))
+            return setupFindAvailability(robot, UserArray)
 
 
+          }).then(allUsersAvailability => {
+            // console.log('all users availability (pre merge):');
+            // allUsersAvailability.forEach( avail => {
+            //   console.log(avail);
+            // })
 
-        // msg.reply(dayVsWeekAvailLoopAndBuildSuggestions(findAvailResp, Command))
+            if (UserArray.arr.length > 1) {
+              // if more than one users info is supplied -> merge availability
 
-      }).catch( err => {
-        console.log('master promise err', err);
-      })
+              while (allUsersAvailability.length >= 2) {
+                // run cross check with first 2 users info and remove them from arr
+                allUsersAvailability.unshift(Merge.availability(allUsersAvailability.shift(), allUsersAvailability.shift()))
+                // re-add the merged availability and rerun until 1 avail is left
+              }
+            }
+
+            // console.log('all users availability (post merge):', allUsersAvailability);
+            // allUsersAvailability.forEach( avail => {
+            //   console.log(avail);
+            // })
+
+            msg.reply('Your current Timezone (set at fastmail.com): ' + UserArray.arr[0].get().timeZone)
+
+            msg.reply(dayVsWeekAvailLoopAndBuildSuggestions(allUsersAvailability, UserArray.arr[0].get().timeZone, UserArray.arr[0].get().datesRequested, Command))
+
+          }).catch(err => {
+            console.log('err', err)
+            return err
+          })
 
     }
   })
