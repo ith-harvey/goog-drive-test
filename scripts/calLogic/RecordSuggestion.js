@@ -119,13 +119,13 @@ class CreateSuggestion {
         this.add(timeZone, currItem.rawStartTime, currItem.rawEndTime)
       })
 
-      this.sortSuggestsChronologically(this.get())
+      // this.sortSuggestsChronologically(this.get())
 
       return this.get()
     }
 
     this.recurseToFindSuggest(availArr, timeZone, '', {})
-    this.sortSuggestsChronologically(this.get())
+    // this.sortSuggestsChronologically(this.get())
 
     return this.get()
   }
