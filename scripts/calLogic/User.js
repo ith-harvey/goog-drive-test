@@ -34,13 +34,18 @@ class UserArray {
 
   constructor() {
     this.arr = []
+    this.error = false
   }
 
   addUser (user) {
     this.arr.push(user)
   }
 
-  get() { return this}
+  triggerError (err) {
+    this.error = err
+  }
+
+  get() { return this }
 
 }
 

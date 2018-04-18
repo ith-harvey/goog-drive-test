@@ -51,6 +51,7 @@ function setupFindAvailability(robot, UserArray ) {
   })
 
   return allUsersAvailability
+
 }
 
 function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZone, requestersDatesRequested, Command) {
@@ -62,6 +63,8 @@ function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZon
     return `\n *${dayOfWeekBold} ${justDate}*`
   }
 
+  let dayIsFullyBooked = (dayRequested) => buildDayHeader(dayRequested) + '\n Ruh ro... This day is already fully booked. :( \n'
+
   let suggestString = ''
   let daySuggestionArr
 
@@ -71,13 +74,20 @@ function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZon
 
       let Suggestion = new CreateSuggestion()
 
+
+      // this is our error day is booked -> just because first set of avails don't work doesn't mean the 2nd or third don't share avail
       if (dayAvailability[0].dayIsBooked) {
-        suggestString += buildDayHeader(requestersDatesRequested[i])
-        suggestString += '\n Ruh ro... This day is already fully booked. :('
+        suggestString += dayIsFullyBooked(requestersDatesRequested[i])
         return
 
       } else if (dayAvailability.length === 1) {
         //run if the day's availability is 'whole' (not broken up)
+        if (dayAvailability[0].availEnd
+          .isSameOrBefore(dayAvailability[0].availStart)) {
+          suggestString += dayIsFullyBooked(requestersDatesRequested[i])
+          return
+        }
+
         daySuggestionArr = Suggestion.generateThreeWholeAvail(dayAvailability[0].availStart, dayAvailability[0].availEnd, requestersTimeZone)
 
       } else {
@@ -109,10 +119,9 @@ module.exports = (robot) => {
   robot.hear(/https/i, function (msg) {
     if (awaitingUrl) {
       let url = msg.message.text.split(' ')[1]
-      console.log('user setting URL',msg.message.user);
       robot.brain.set(msg.message.user.id, { busyCalUrl: url })
 
-      msg.reply('Woof woof! URL was received... \n \n Excellent, now I need to know your preferred working hours when you will be available for meetings. \n \n Please enter them in 24hr format: <HH:mm>-<HH:mm> (e.g. 09:00-17:00)')
+      msg.reply('Woof woof! URL was received... \n \n Excellent, now I need to know your preferred working hours when you will be available for meetings. \n \n Enter them in 24hr format: <HH:mm>-<HH:mm> (e.g. 09:00-17:00)')
 
       awaitingUrl = false
       awaitingWorkHours = true
@@ -120,8 +129,19 @@ module.exports = (robot) => {
   })
 
   robot.hear(/[0-9][0-9]:[0-5][0-9]-[0-9][0-9]:[0-5][0-9]/i, function (msg) {
+    console.log('value needed to run', awaitingWorkHours);
     if (awaitingWorkHours) {
       let hrs = msg.message.text.split(' ')[1]
+      let compareprep = (hrsArr) => Number(hrsArr.split('').splice(0,2).join(''))
+      let compareStart = compareprep(hrs.split('-')[0])
+      let compareEnd = compareprep(hrs.split('-')[1])
+
+      console.log('compare', (compareEnd - compareStart));
+
+      if ((compareEnd - compareStart) < 5) {
+        return msg.reply('Ruh ro... The times you have provided amount to less than five hours i.e. `09:00-13:00` or cross into the next day i.e. `17:00-4:00`. Please enter in work hours with a difference of five or more hours that don\'t cross into the next day. \n \n Enter them in a 24hr format: <HH:mm>-<HH:mm> (e.g. 09:00-17:00)')
+      }
+
 
       robot.brain.set(msg.message.user.id, {
         busyCalUrl: robot.brain.get(msg.message.user.id).busyCalUrl,
@@ -145,11 +165,6 @@ module.exports = (robot) => {
         let Command = new IncomingCommand()
         let UserArray = Command.interpreter(robot, msg.message)
 
-        if (UserArray.error) {
-          console.log('error', error);
-          return msg.reply(delegatorObj.error)
-          }
-
         let userInfoPromiseArr = UserArray.arr.map( user => {
               return new Promise( (resolve, reject) => {
                 resolve(rp(robot.brain.get(user.userId).busyCalUrl))
@@ -161,14 +176,15 @@ module.exports = (robot) => {
 
             UserArray = Misc.completeUserInformation(robot, userInfoArr, UserArray, Command)
 
+            if (UserArray.error) {
+              console.log('error', UserArray.error);
+              return msg.reply(UserArray.error)
+              }
+
             return setupFindAvailability(robot, UserArray)
 
 
           }).then(allUsersAvailability => {
-            // console.log('all users availability (pre merge):');
-            // allUsersAvailability.forEach( avail => {
-            //   console.log(avail);
-            // })
 
             if (UserArray.arr.length > 1) {
               // if more than one users info is supplied -> merge availability
@@ -180,11 +196,6 @@ module.exports = (robot) => {
               }
             }
 
-            // console.log('all users availability (post merge):', allUsersAvailability);
-            // allUsersAvailability.forEach( avail => {
-            //   console.log(avail);
-            // })
-
             msg.reply('Your current Timezone (set at fastmail.com): ' + UserArray.arr[0].get().timeZone)
 
             msg.reply(dayVsWeekAvailLoopAndBuildSuggestions(allUsersAvailability, UserArray.arr[0].get().timeZone, UserArray.arr[0].get().datesRequested, Command))
@@ -193,8 +204,15 @@ module.exports = (robot) => {
             console.log('err', err)
             return err
           })
+        }
+    })
 
-    }
-  })
+    robot.respond(/(help)/i, function (msg) {
+      msg.reply('Woof woof! I\'m here to help! \n \n To get more specific information regarding which feature of the `@doge` bot you are having trouble with please run one of the following commands: \n \n`@doge cal help` : help with the calendar bot \n \n if you are still having trouble send a DM to the creator `@iant` \n \n additionally here are some commands that come baked in: \n \n')
+    })
+
+    robot.respond(/(cal help)/i, function (msg) {
+      msg.reply('Woof woof! I\'m here to help! \n \n The `@doge cal suggest` bot is a meeting query tool that finds availability in users schedules and responds with suggested meeting times.\n \n There are several commands which allow you to change the window of your suggestion and the users (who are already setup) it includes. The commands are as follows: \n \n `@doge cal suggest` : provides available meeting suggestions for today. \n `@doge cal suggest week` : provides available meeting suggestions for this week. \n `@doge cal suggest <month> <day>` : provides available meeting suggestions for the specified day. \n `@doge cal suggest week <month> <day>` : provides available meeting suggestions for that week starting on the specified day. \n `@doge cal suggest <users>` : provides available meeting suggestions for all included users, today. \n `@doge cal suggest <users> <month> <day>` : provides available meeting suggestions for all included users on the specified day. \n `@doge cal suggest <users> week` : provides available meeting suggestions for all included users on that week. \n `@doge cal suggest <users> week <month> <day>` : provides available meeting suggestions for all included users for that week, starting on the specified day. \n \n if you are still having trouble shoot a DM to the creator `@iant`')
+    })
 
 }

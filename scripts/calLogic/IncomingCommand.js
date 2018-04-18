@@ -89,8 +89,8 @@ class IncomingCommand {
   }
 
   errorHandler(errMsg) {
-    this.DelegatorObject.add('error', errMsg)
-    return this.DelegatorObject.get()
+    this.arrayOfUsers.triggerError(errMsg)
+    return this.arrayOfUsers.get()
   }
 
   setRequestedQuery(msg) {
@@ -108,7 +108,10 @@ class IncomingCommand {
     let weeksWorkingDaysArr = this.setScopeOfWorkWeek(dateRequested)
 
     //if Query is weekend return error msg
-    if (weeksWorkingDaysArr.err) return this.errorHandler(weeksWorkingDaysArr.err)
+
+    if (weeksWorkingDaysArr.err) {
+      return this.errorHandler(weeksWorkingDaysArr.err)
+    }
 
     this.setRequestedQuery(`week of ${dateRequested.format('LL')}`)
     weeksWorkingDaysArr.forEach( date => User.add('datesRequested', date))
@@ -178,6 +181,7 @@ class IncomingCommand {
       return this.buildEventWeek(dayProvided)
 
     } else if (6 === dayProvided.isoWeekday() || dayProvided.isoWeekday() === 7) {
+      console.log('returning error! from setScope');
       return { err: 'Woof woof! I don\'t support week queries that land on weekend dates. To retrieve weekend meeting suggestions please use the single day query: `@doge cal suggest <users(optional)> <month> <day>`.'}
     }
   }

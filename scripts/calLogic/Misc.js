@@ -54,6 +54,7 @@ const findAvailability = (eventArr, wrkHrs, dateAvailRequested, Availability) =>
 
         if (eventStart.isBefore(wrkHrs.end, 'minutes')) {
           // event start happens during work hours
+          console.log('gets in here');
           Availability.set(wrkHrs, eventEnd, eventStart)
 
         } else {
@@ -76,7 +77,8 @@ const findAvailability = (eventArr, wrkHrs, dateAvailRequested, Availability) =>
 
   }
 
-  if (Availability.lastEventEndTime !== 'undefined') {
+  if ((Availability.lastEventEndTime !== 'undefined')
+      && Availability.lastEventEndTime.isBefore(wrkHrs.end)) {
     // an event has been set add more availability till end of day
     Availability.setUntilEndOfWorkDay(wrkHrs)
   }
@@ -150,7 +152,13 @@ function completeUserInformation(robot, userInfoArr, UserArray, Command) {
   let output = ical2json.convert(userInfoArr[i]);
 
   if (!output.VCALENDAR[0].VEVENT) {
-    console.log(' //// ERROR! no events in this persons calendar!!! You can book anything! /// ')
+    console.log('This user has no events in their calendar -> inserting fake event.')
+    output.VCALENDAR[0].VEVENT = [ { DTEND: '20180413T000000Z',
+    DTSTAMP: '20180418T151757Z',
+    DTSTART: '20180412T160000Z',
+    SEQUENCE: '0',
+    TRANSP: 'OPAQUE',
+    UID: 'user was didnt have any events in their calendar this is a fake entry' }]
   }
 
   let data = {
@@ -163,7 +171,6 @@ function completeUserInformation(robot, userInfoArr, UserArray, Command) {
   })
 
   return UserArray.get()
-
 }
 
 module.exports = {

@@ -71,7 +71,6 @@ class CreateSuggestion {
     let testSuggestions = []
 
     availArr.forEach( availWindow => {
-      console.log('curr avail Wind', availWindow);
       let sizeOfAvailWindowInMin =  moment.duration(availWindow.availEnd.diff(availWindow.availStart)).asMinutes()
       let availabilityStartPoint = availWindow.availStart
 
@@ -103,7 +102,6 @@ class CreateSuggestion {
   }
 
   generateThreeSeperatedAvail(availArr, timeZone) {
-    console.log('we in herr?');
     availArr = this.buildTestSuggestions(availArr, timeZone)
 
     if (availArr.length <= 3) {
