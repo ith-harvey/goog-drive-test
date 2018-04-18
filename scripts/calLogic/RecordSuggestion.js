@@ -46,7 +46,7 @@ class CreateSuggestion {
       // if start - end hr diff is 4 or more select at random
       arr = Misc.selectRandomStartTimes(arr)
     }
-
+    console.log('all start times in whole', arr);
     arr.forEach(startTime =>  {
       endTime = moment(startTime).add(1, 'hours')
       this.add(requestersTimeZone, startTime, endTime)
@@ -55,15 +55,24 @@ class CreateSuggestion {
     return this.get()
   }
 
-
-  // sortSuggestsChronologically () {
-  //   if (this.suggestionArr.length === 1) return
+  // sortSuggestsChronologically (suggestions) {
+  //   console.log('in sortsuggest chron', suggestions);
   //
-  //   for (i = 0; i < arrCline - 1; i++) {
-  //     if (this.suggestionArr[i].isAfter(this.suggestionArr[i+1])) {
-  //       this.suggestionArr.splice()
-  //     }
+  //   if (suggestions.length < 2) {
+  //     // only one suggestion, purposless to sort
+  //     return
   //   }
+  //
+  //   let chronSuggestions = [suggestions.pop()]
+  //   let i = 0
+  //
+  //
+  //   while (suggestions.length) {
+  //     if (chronSuggestions[i].rawStartTime.isSameOrBefore(suggestions[i].rawStartTime) )
+  //
+  //
+  //   }
+  //
   // }
 
   buildTestSuggestions(availArr, timeZone) {
@@ -106,16 +115,17 @@ class CreateSuggestion {
 
     if (availArr.length <= 3) {
       // could have only one/two/three items in availArr
-      // this.sortSuggestsChronologically()
       availArr.forEach( currItem => {
         this.add(timeZone, currItem.rawStartTime, currItem.rawEndTime)
       })
+
+      this.sortSuggestsChronologically(this.get())
 
       return this.get()
     }
 
     this.recurseToFindSuggest(availArr, timeZone, '', {})
-    // this.sortSuggestsChronologically()
+    this.sortSuggestsChronologically(this.get())
 
     return this.get()
   }
