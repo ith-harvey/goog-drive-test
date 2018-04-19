@@ -1,3 +1,5 @@
+// jscs:disable requireSemicolons
+// jscs:disable maximumLineLength
 
 const rp = require('request-promise');
 const momentTZ = require('moment-timezone');
@@ -32,6 +34,7 @@ class IncomingCommand {
           }
         }
       }
+
       return false
     }
 
@@ -52,6 +55,7 @@ class IncomingCommand {
     this.checkIfValidQuery(cmdArr)
 
     this.arrayOfUsers.addUser(new User.Individual(message.user.id))
+
     // add the user who requested suggestions to our user array
 
     if (cmdArr.length - 1 === basicQuery) {
@@ -76,7 +80,7 @@ class IncomingCommand {
         }
 
         this.arrayOfUsers.addUser(new User.Individual(robot.brain.usersForFuzzyName(currUser)[0].id))
-        uNamePosition ++
+        uNamePosition++
         currUser = cmdArr[uNamePosition]
       }
 
@@ -85,14 +89,15 @@ class IncomingCommand {
         this.saveQueryParsable('DayQueryNoDates')
         return this.arrayOfUsers.get()
       }
+
       // week query, with users - and dates and or week
       this.saveQueryParsable(cmdArr.splice(uNamePosition, cmdArr.length))
       return this.arrayOfUsers.get()
     }
+
     // week query, no additional users, no dates?
     this.saveQueryParsable(cmdArr.splice(basicQuery + 1, cmdArr.length))
     return this.arrayOfUsers.get()
-
   }
 
   dateInterpreter(User, todaysDate) {
@@ -136,7 +141,7 @@ class IncomingCommand {
     }
 
     this.setRequestedQuery(`week of ${dateRequested.format('LL')}`)
-    weeksWorkingDaysArr.forEach( date => User.add('datesRequested', date))
+    weeksWorkingDaysArr.forEach(date => User.add('datesRequested', date))
 
     return User.get()
   }
@@ -148,7 +153,7 @@ class IncomingCommand {
     if (weeksWorkingDaysArr.err) return this.errorHandler(weeksWorkingDaysArr.err)
 
     this.setRequestedQuery('this week')
-    weeksWorkingDaysArr.forEach( date => User.add('datesRequested', date))
+    weeksWorkingDaysArr.forEach(date => User.add('datesRequested', date))
 
     return User.get()
   }
@@ -165,9 +170,9 @@ class IncomingCommand {
       this.queryParsable.push(query)
       return
     }
+
     this.queryParsable = query
   }
-
 
   dayQueryWithDates(User, month, day) {
     // day query with dates
@@ -193,18 +198,20 @@ class IncomingCommand {
       if (day.isSameOrAfter(Time.getTodaysDate(), 'day')) {
         daysToCheckAvailability.push(moment.utc(day.toDate()));
       }
-        day = day.clone().add(1, 'd');
+
+      day = day.clone().add(1, 'd');
     }
+
     return daysToCheckAvailability
   }
 
   setScopeOfWorkWeek(dayProvided) {
-    if (1 <= dayProvided.isoWeekday() && dayProvided.isoWeekday() <= 5 ) {
+    if (1 <= dayProvided.isoWeekday() && dayProvided.isoWeekday() <= 5) {
       return this.buildEventWeek(dayProvided)
 
     } else if (6 === dayProvided.isoWeekday() || dayProvided.isoWeekday() === 7) {
       console.log('returning error! from setScope');
-      return { err: 'I don\'t support week queries that land on weekend dates. To retrieve weekend meeting suggestions please use the single day query: `@doge cal suggest <users(optional)> <month> <day>`.'}
+      return { err: 'I don\'t support week queries that land on weekend dates. To retrieve weekend meeting suggestions please use the single day query: `@doge cal suggest <users(optional)> <month> <day>`.' }
     }
   }
 

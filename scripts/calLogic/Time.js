@@ -1,7 +1,9 @@
+
+// jscs:disable requireSemicolons
+// jscs:disable maximumLineLength
+
 const momentTZ = require('moment-timezone');
 const moment = require('moment');
-
-
 const getTodaysDate = currentTimeZone => moment.utc()
 const minutesOfDay = m => m.minutes() + m.hours() * 60;
 
@@ -70,5 +72,5 @@ module.exports = {
   localTime,
   formatDate,
   wrkHrsParse,
-  interpDate
+  interpDate,
 }

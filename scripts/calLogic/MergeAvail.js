@@ -1,11 +1,10 @@
+// jscs:disable requireSemicolons
+// jscs:disable maximumLineLength
 
 const momentTZ = require('moment-timezone');
 const moment = require('moment');
-
 const Time = require('./Time.js')
 const CreateAvailability = require('./RecordAvailability.js')
-
-
 
 class Merge {
 
@@ -19,26 +18,26 @@ class Merge {
 
   static availability(user1, user2) {
 
-  let mergedAvailArr = []
+    let mergedAvailArr = []
 
-  for (let i = 0; i < user1.length; i++) {
+    for (let i = 0; i < user1.length; i++) {
 
-    let largerNumOfAvailWindows = this.determLongerAvailWindows(user1[i], user2[i])
+      let largerNumOfAvailWindows = this.determLongerAvailWindows(user1[i], user2[i])
 
-    let Availability = new CreateAvailability()
+      let Availability = new CreateAvailability()
 
-    let compare = this.prepEventsForComparison(largerNumOfAvailWindows, user1[i][0], user1[i], user2[i][0], user2[i])
+      let compare = this.prepEventsForComparison(largerNumOfAvailWindows, user1[i][0], user1[i], user2[i][0], user2[i])
 
-    mergedAvailArr.push(this.compareAvailability(compare, Availability))
-  }
+      mergedAvailArr.push(this.compareAvailability(compare, Availability))
+    }
 
-  return mergedAvailArr
+    return mergedAvailArr
 
   }
 
   static prepEventsForComparison(largerNumOfAvailWindows, user1FirstWindow, user1EventArr, user2FirstWindow, user2EventArr) {
 
-    function buildCompare (windowToUse, additionalParam) {
+    function buildCompare(windowToUse, additionalParam) {
       let returnObj = {
         start: windowToUse.availStart,
         end: windowToUse.availEnd,
@@ -51,6 +50,7 @@ class Merge {
       while (availArray[i] === undefined) {
         i++
       }
+
       return buildCompare(availArray[i])
     }
 
@@ -63,7 +63,6 @@ class Merge {
         // both days are entirely free -> run comparison
         compare.user1Event = buildCompare(user1FirstWindow, 'dayIsFree')
         compare.user2Event = buildCompare(user2FirstWindow, 'dayIsFree')
-
 
       } else if (user1FirstWindow.dayIsBooked || user2FirstWindow.dayIsBooked) {
         // both days are entirely Booked -> run comparison
@@ -95,6 +94,7 @@ class Merge {
           compare.user2Event = buildCompare(user2EventArr[j])
         }
       }
+
       compareArr.push(compare)
     }
 
@@ -116,9 +116,9 @@ class Merge {
       }
 
       // determine start of window
-      if(user1Ev.start.isSameOrBefore(user2Ev.start, 'minutes')) {
+      if (user1Ev.start.isSameOrBefore(user2Ev.start, 'minutes')) {
         mergeEventToPush.start = user2Ev.start
-      } else if (user1Ev.start.isSameOrAfter(user2Ev.start,'minutes')) {
+      } else if (user1Ev.start.isSameOrAfter(user2Ev.start, 'minutes')) {
         mergeEventToPush.start = user1Ev.start
       }
 
@@ -137,7 +137,5 @@ class Merge {
   }
 
 }
-
-
 
 module.exports = Merge

@@ -1,3 +1,5 @@
+// jscs:disable requireSemicolons
+// jscs:disable maximumLineLength
 
 const momentTZ = require('moment-timezone');
 const moment = require('moment');
@@ -30,13 +32,14 @@ class CreateSuggestion {
       let meetingLeng = 60
       let arr = []
       let modStart = moment.utc(start)
-      for (let i = 0; i < (diff(start, end) / meetingLeng); i++ ) {
+      for (let i = 0; i < (diff(start, end) / meetingLeng); i++) {
         if (i) {
           arr.push(moment.utc(modStart.add(60, 'm')))
         } else {
           arr.push(start)
-         }
+        }
       }
+
       return arr
     }
 
@@ -51,7 +54,7 @@ class CreateSuggestion {
       endTime = moment(startTime).add(1, 'hours')
       this.add(requestersTimeZone, startTime, endTime)
     })
-    
+
     return this.get()
   }
 
@@ -76,7 +79,7 @@ class CreateSuggestion {
 
     let testSuggestions = []
 
-    availArr.forEach( availWindow => {
+    availArr.forEach(availWindow => {
       let sizeOfAvailWindowInMin =  moment.duration(availWindow.availEnd.diff(availWindow.availStart)).asMinutes()
       let availabilityStartPoint = availWindow.availStart
 
@@ -97,7 +100,7 @@ class CreateSuggestion {
       return
     }
 
-    currItem = availArr[Math.floor(Math.random()*availArr.length)];
+    currItem = availArr[Math.floor(Math.random() * availArr.length)];
 
     if (!suggestObj[currItem.rawStartTime]) {
       suggestObj[currItem.rawStartTime] = true
@@ -112,7 +115,7 @@ class CreateSuggestion {
 
     if (availArr.length <= 3) {
       // could have only one/two/three items in availArr
-      availArr.forEach( currItem => {
+      availArr.forEach(currItem => {
         this.add(timeZone, currItem.rawStartTime, currItem.rawEndTime)
       })
 
@@ -131,7 +134,7 @@ class CreateSuggestion {
 
     this.suggestionArr.push({
 
-      localTime: `${timeZone}: ${moment(Time.localTime(availStart, timeZone), 'DD-MM-YYYY hh:mm:ss a').format("hh:mm:ss a")} - ${moment(Time.localTime(availEnd, timeZone), 'DD-MM-YYYY hh:mm:ss a').format("hh:mm:ss a")}`,
+      localTime: `${timeZone}: ${moment(Time.localTime(availStart, timeZone), 'DD-MM-YYYY hh:mm:ss a').format('hh:mm:ss a')} - ${moment(Time.localTime(availEnd, timeZone), 'DD-MM-YYYY hh:mm:ss a').format('hh:mm:ss a')}`,
 
       UTC: `UTC: ${availStart} - ${availEnd}`,
 
@@ -144,7 +147,7 @@ class CreateSuggestion {
   testAdd(timeZone, availStart, availEnd) {
     return {
 
-      localTime: `${timeZone}: ${moment(Time.localTime(availStart, timeZone), 'DD-MM-YYYY hh:mm:ss a').format("hh:mm:ss a")} - ${moment(Time.localTime(availEnd, timeZone), 'DD-MM-YYYY hh:mm:ss a').format("hh:mm:ss a")}`,
+      localTime: `${timeZone}: ${moment(Time.localTime(availStart, timeZone), 'DD-MM-YYYY hh:mm:ss a').format('hh:mm:ss a')} - ${moment(Time.localTime(availEnd, timeZone), 'DD-MM-YYYY hh:mm:ss a').format('hh:mm:ss a')}`,
 
       UTC: `UTC: ${availStart} - ${availEnd}`,
 

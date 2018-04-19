@@ -1,3 +1,6 @@
+// jscs:disable requireSemicolons
+// jscs:disable maximumLineLength
+
 const momentTZ = require('moment-timezone');
 const moment = require('moment');
 

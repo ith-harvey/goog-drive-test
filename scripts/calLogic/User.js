@@ -1,3 +1,5 @@
+// jscs:disable requireSemicolons
+// jscs:disable maximumLineLength
 class Individual {
   constructor(userId) {
     this.userId = userId
@@ -13,6 +15,7 @@ class Individual {
     } else {
       this[addTo] = whatWeAdd
     }
+
     return this
   }
 
@@ -22,13 +25,13 @@ class Individual {
     } else {
       Command.dateInterpreter(this, todayInTimeZone)
     }
+
     return this
   }
 
   get() { return this }
 
 }
-
 
 class UserArray {
 
@@ -49,4 +52,4 @@ class UserArray {
 
 }
 
-module.exports = {UserArray, Individual}
+module.exports = { UserArray, Individual }
