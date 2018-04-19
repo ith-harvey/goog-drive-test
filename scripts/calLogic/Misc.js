@@ -94,6 +94,10 @@ const findAvailability = (eventArr, wrkHrs, dateAvailRequested, Availability) =>
 
 
 function checkIfUserIsSetup(robot, userId) {
+
+  console.log('here is their id', userId);
+  console.log('here is their id',robot.brain.get(userId).busyCalUrl);
+  console.log('here is their id', robot.brain.get(userId).workHrs);
   // input validation function
 
   if (robot.brain.get(userId) === null) {

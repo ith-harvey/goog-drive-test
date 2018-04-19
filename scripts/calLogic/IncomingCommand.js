@@ -182,7 +182,7 @@ class IncomingCommand {
 
     } else if (6 === dayProvided.isoWeekday() || dayProvided.isoWeekday() === 7) {
       console.log('returning error! from setScope');
-      return { err: 'Woof woof! I don\'t support week queries that land on weekend dates. To retrieve weekend meeting suggestions please use the single day query: `@doge cal suggest <users(optional)> <month> <day>`.'}
+      return { err: 'I don\'t support week queries that land on weekend dates. To retrieve weekend meeting suggestions please use the single day query: `@doge cal suggest <users(optional)> <month> <day>`.'}
     }
   }
 

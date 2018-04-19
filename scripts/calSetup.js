@@ -33,6 +33,9 @@ const Time = require('./calLogic/Time.js')
 const Merge = require('./calLogic/MergeAvail.js')
 const Misc = require('./calLogic/Misc.js')
 
+
+let checkIfDMOrPublic = (msg) => msg.split(' ')[1] ? msg.split(' ')[1] : msg.split(' ')[0] // if in DM the mssge has an added 'doge' string -> this gets rid of it
+
 function setupFindAvailability(robot, UserArray ) {
   let allUsersAvailability = []
 
@@ -41,7 +44,10 @@ function setupFindAvailability(robot, UserArray ) {
 
     allUsersAvailability.push( User.datesRequested.map( (dayToCheck) => {
 
+      console.log('wrk hrs here : ', robot.brain.get(User.userId).workHrs);
+
       let wrkHrsInUTC = Time.wrkHrsParse(robot.brain.get(User.userId).workHrs, User.timeZone, dayToCheck)
+      // console.log('here are the workHrs', wrkHrsInUTC);
 
       let Availability = new CreateAvailability()
 
@@ -104,7 +110,7 @@ function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZon
     })
   })
 
-  return `Woof woof! Here are some meeting suggestions for ${Command.getRequestedQuery()}: \n \n` + suggestString
+  return `Here are some meeting suggestions for ${Command.getRequestedQuery()}: \n \n` + suggestString
 }
 
 module.exports = (robot) => {
@@ -112,16 +118,17 @@ module.exports = (robot) => {
   let awaitingUrl = false, awaitingWorkHours = false, calSetupDone = false
 
   robot.respond(/(cal setup)/i, function (msg) {
-    msg.reply('Woof woof! Welcome to the cal setup wizard. \n \n Please enter your fastmail account’s free/busy calendar URL so I can share your availability upon request.\n\n (To access your free/busy calendar URL visit www.fastmail.com/calendar/ while logged in.\n Select the calendar dropdown > settings > calendars > Edit&share > check free/busy information > copy the url > hit save up top > paste URL in chat and hit enter)')
+    msg.reply('Welcome to the cal setup wizard. \n \n Please enter your fastmail account’s free/busy calendar URL so I can share your availability upon request.\n\n (To access your free/busy calendar URL visit www.fastmail.com/calendar/ while logged in.\n Select the calendar dropdown > settings > calendars > Edit&share > check free/busy information > copy the url > hit save up top > paste URL in chat and hit enter)')
     awaitingUrl = true
   })
 
   robot.hear(/https/i, function (msg) {
     if (awaitingUrl) {
-      let url = msg.message.text.split(' ')[1]
-      robot.brain.set(msg.message.user.id, { busyCalUrl: url })
+      msg.message.text = checkIfDMOrPublic(msg.message.text)
 
-      msg.reply('Woof woof! URL was received... \n \n Excellent, now I need to know your preferred working hours when you will be available for meetings. \n \n Enter them in 24hr format: <HH:mm>-<HH:mm> (e.g. 09:00-17:00)')
+      robot.brain.set(msg.message.user.id, { busyCalUrl: msg.message.text })
+
+      msg.reply('URL was received... \n \n Excellent, now I need to know your preferred working hours when you will be available for meetings. \n \n Enter them in 24hr format: <HH:mm>-<HH:mm> (e.g. 09:00-17:00)')
 
       awaitingUrl = false
       awaitingWorkHours = true
@@ -129,29 +136,27 @@ module.exports = (robot) => {
   })
 
   robot.hear(/[0-9][0-9]:[0-5][0-9]-[0-9][0-9]:[0-5][0-9]/i, function (msg) {
-    console.log('value needed to run', awaitingWorkHours);
     if (awaitingWorkHours) {
-      let hrs = msg.message.text.split(' ')[1]
+
+      msg.message.text = checkIfDMOrPublic(msg.message.text)
+
+      let hrs = msg.message.text.split('-')
+
       let compareprep = (hrsArr) => Number(hrsArr.split('').splice(0,2).join(''))
 
-      console.log('hrs', hrs);
-
-      let compareStart = compareprep(hrs.split('-')[0])
-      let compareEnd = compareprep(hrs.split('-')[1])
-
-      console.log('compare', (compareEnd - compareStart));
+      let compareStart = compareprep(hrs[0])
+      let compareEnd = compareprep(hrs[1])
 
       if ((compareEnd - compareStart) < 5) {
         return msg.reply('Ruh ro... The times you have provided amount to less than five hours i.e. `09:00-13:00` or cross into the next day i.e. `17:00-4:00`. Please enter in work hours with a difference of five or more hours that don\'t cross into the next day. \n \n Enter them in a 24hr format: <HH:mm>-<HH:mm> (e.g. 09:00-17:00)')
       }
 
-
       robot.brain.set(msg.message.user.id, {
         busyCalUrl: robot.brain.get(msg.message.user.id).busyCalUrl,
-        workHrs: hrs,
+        workHrs: msg.message.text,
       })
 
-      msg.reply('Woof woof! Thank you for completing the cal setup wizard!, you may now use the `@doge cal suggest` feature.')
+      msg.reply('Thank you for completing the cal setup wizard!, you may now use the `@doge cal suggest` feature.')
 
       awaitingWorkHours = false
       calSetupDone = true
@@ -159,9 +164,12 @@ module.exports = (robot) => {
   })
 
   robot.respond(/(cal suggest)/i, function (msg) {
+    console.log('raw message cal suggest', msg.message.text);
+    // msg.message.text = checkIfDMOrPublic(msg.message.text)
+    // console.log('after check', msg.message.text);
 
     if (Misc.checkIfUserIsSetup(robot, msg.message.user.id)) {
-      msg.reply('Woof woof! To use the `@doge cal suggest` feature you must first go through the setup wizard. Do so by typing the command `@doge cal setup`.')
+      msg.reply('To use the `@doge cal suggest` feature you must first go through the setup wizard. Do so by typing the command `@doge cal setup`.')
     } else {
         console.log('incoming message : ', msg.message.text);
 
@@ -178,20 +186,24 @@ module.exports = (robot) => {
             let response = []
 
             UserArray = Misc.completeUserInformation(robot, userInfoArr, UserArray, Command)
+            // Uses get request above to complete User information
 
             if (UserArray.error) {
-              console.log('error', UserArray.error);
               return msg.reply(UserArray.error)
-              }
+            }
 
             return setupFindAvailability(robot, UserArray)
+            // sets up and calls findAvailability
 
 
           }).then(allUsersAvailability => {
+            console.log('allUsersAvailability pre merge:');
+            allUsersAvailability.forEach( user => {
+              console.log(user);
+            })
 
             if (UserArray.arr.length > 1) {
               // if more than one users info is supplied -> merge availability
-
               while (allUsersAvailability.length >= 2) {
                 // run cross check with first 2 users info and remove them from arr
                 allUsersAvailability.unshift(Merge.availability(allUsersAvailability.shift(), allUsersAvailability.shift()))
@@ -211,11 +223,11 @@ module.exports = (robot) => {
     })
 
     robot.respond(/(help)/i, function (msg) {
-      msg.reply('Woof woof! I\'m here to help! \n \n To get more specific information regarding which feature of the `@doge` bot you are having trouble with please run one of the following commands: \n \n`@doge cal help` : help with the calendar bot \n \n if you are still having trouble send a DM to the creator `@iant` \n \n additionally here are some commands that come baked in: \n \n')
+      msg.reply('I\'m here to help! \n \n To get more specific information regarding which feature of the `@doge` bot you are having trouble with please run one of the following commands: \n \n`@doge cal help` : help with the calendar bot \n \n if you are still having trouble send a DM to the creator `@iant` \n \n additionally here are some commands that come baked in: \n \n')
     })
 
     robot.respond(/(cal help)/i, function (msg) {
-      msg.reply('Woof woof! I\'m here to help! \n \n The `@doge cal suggest` bot is a meeting query tool that finds availability in users schedules and responds with suggested meeting times.\n \n There are several commands which allow you to change the window of your suggestion and the users (who are already setup) it includes. The commands are as follows: \n \n `@doge cal setup` : starts the setup wizard to get users up and running with the cal bot. \n `@doge cal suggest` : provides available meeting suggestions for today. \n `@doge cal suggest week` : provides available meeting suggestions for this week. \n `@doge cal suggest <month> <day>` : provides available meeting suggestions for the specified day. \n `@doge cal suggest week <month> <day>` : provides available meeting suggestions for that week starting on the specified day. \n `@doge cal suggest <users>` : provides available meeting suggestions for all included users, today. \n `@doge cal suggest <users> <month> <day>` : provides available meeting suggestions for all included users on the specified day. \n `@doge cal suggest <users> week` : provides available meeting suggestions for all included users on that week. \n `@doge cal suggest <users> week <month> <day>` : provides available meeting suggestions for all included users for that week, starting on the specified day. \n \n if you are still having trouble shoot a DM to the creator `@iant`')
+      msg.reply('I\'m here to help! \n \n The `@doge cal suggest` bot is a meeting query tool that finds availability in users schedules and responds with suggested meeting times.\n \n There are several commands which allow you to change the window of your suggestion and the users (who are already setup) it includes. The commands are as follows: \n \n `@doge cal setup` : starts the setup wizard to get users up and running with the cal bot. \n `@doge cal suggest` : provides available meeting suggestions for today. \n `@doge cal suggest week` : provides available meeting suggestions for this week. \n `@doge cal suggest <month> <day>` : provides available meeting suggestions for the specified day. \n `@doge cal suggest week <month> <day>` : provides available meeting suggestions for that week starting on the specified day. \n `@doge cal suggest <users>` : provides available meeting suggestions for all included users, today. \n `@doge cal suggest <users> <month> <day>` : provides available meeting suggestions for all included users on the specified day. \n `@doge cal suggest <users> week` : provides available meeting suggestions for all included users on that week. \n `@doge cal suggest <users> week <month> <day>` : provides available meeting suggestions for all included users for that week, starting on the specified day. \n \n if you are still having trouble shoot a DM to the creator `@iant`')
     })
 
 }
