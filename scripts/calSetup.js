@@ -133,6 +133,9 @@ module.exports = (robot) => {
     if (awaitingWorkHours) {
       let hrs = msg.message.text.split(' ')[1]
       let compareprep = (hrsArr) => Number(hrsArr.split('').splice(0,2).join(''))
+
+      console.log('hrs', hrs);
+
       let compareStart = compareprep(hrs.split('-')[0])
       let compareEnd = compareprep(hrs.split('-')[1])
 
