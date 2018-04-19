@@ -21,6 +21,26 @@ class IncomingCommand {
     return regExp.test(text)
   }
 
+  checkIfValidQuery(cmdArr) {
+
+    let weekIsPositionedWrong = (cmdArr) => {
+      if (cmdArr.indexOf('week') !== -1) {
+        if (cmdArr.indexOf('week') === cmdArr.length - 1) {
+          if (!isNaN(cmdArr[cmdArr.indexOf('week') - 1])) {
+            // error week
+            return true
+          }
+        }
+      }
+      return false
+    }
+
+    if (weekIsPositionedWrong(cmdArr)) {
+      return this.errorHandler('Invalid query, please check the position of "week" in your request. If you need a refresher on commands type `@doge cal help`.')
+    }
+
+  }
+
   interpreter (robot, message) {
 
     let cmdArr = message.text.split(' ')
@@ -29,8 +49,10 @@ class IncomingCommand {
 
     let basicQuery = cmdArr.indexOf('suggest')
 
-    // this.DelegatorObject.add('meetingLengthInMinutes', 60)
+    this.checkIfValidQuery(cmdArr)
+
     this.arrayOfUsers.addUser(new User.Individual(message.user.id))
+    // add the user who requested suggestions to our user array
 
     if (cmdArr.length - 1 === basicQuery) {
       this.saveQueryParsable('DayQueryNoDates')
@@ -63,13 +85,10 @@ class IncomingCommand {
         this.saveQueryParsable('DayQueryNoDates')
         return this.arrayOfUsers.get()
       }
-
-      // week query, with users - no dates?
+      // week query, with users - and dates and or week
       this.saveQueryParsable(cmdArr.splice(uNamePosition, cmdArr.length))
       return this.arrayOfUsers.get()
-
     }
-
     // week query, no additional users, no dates?
     this.saveQueryParsable(cmdArr.splice(basicQuery + 1, cmdArr.length))
     return this.arrayOfUsers.get()

@@ -46,12 +46,12 @@ class CreateSuggestion {
       // if start - end hr diff is 4 or more select at random
       arr = Misc.selectRandomStartTimes(arr)
     }
-    console.log('all start times in whole', arr);
+
     arr.forEach(startTime =>  {
       endTime = moment(startTime).add(1, 'hours')
       this.add(requestersTimeZone, startTime, endTime)
     })
-
+    
     return this.get()
   }
 
@@ -69,10 +69,7 @@ class CreateSuggestion {
   //
   //   while (suggestions.length) {
   //     if (chronSuggestions[i].rawStartTime.isSameOrBefore(suggestions[i].rawStartTime) )
-  //
-  //
   //   }
-  //
   // }
 
   buildTestSuggestions(availArr, timeZone) {

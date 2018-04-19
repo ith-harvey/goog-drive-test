@@ -23,7 +23,6 @@
 const momentTZ = require('moment-timezone');
 const moment = require('moment');
 
-
 const rp = require('request-promise');
 const IncomingCommand = require('./calLogic/IncomingCommand.js')
 const CreateAvailability = require('./calLogic/RecordAvailability.js')
@@ -43,8 +42,6 @@ function setupFindAvailability(robot, UserArray ) {
     // loop over each user
 
     allUsersAvailability.push( User.datesRequested.map( (dayToCheck) => {
-
-      console.log('wrk hrs here : ', robot.brain.get(User.userId).workHrs);
 
       let wrkHrsInUTC = Time.wrkHrsParse(robot.brain.get(User.userId).workHrs, User.timeZone, dayToCheck)
       // console.log('here are the workHrs', wrkHrsInUTC);
@@ -79,7 +76,6 @@ function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZon
     weekAvailability.forEach( (dayAvailability, i) => {
 
       let Suggestion = new CreateSuggestion()
-
 
       // this is our error day is booked -> just because first set of avails don't work doesn't mean the 2nd or third don't share avail
       if (dayAvailability[0].dayIsBooked) {
