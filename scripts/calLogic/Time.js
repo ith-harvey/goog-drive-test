@@ -56,12 +56,9 @@ function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
 
   let returnObj = {
     start: momentSet(dayRequested, start),
-
     end: momentSet(dayRequested, end),
-
     timeZone: timeZone,
   }
-  // console.log('wrkHrs leaving', returnObj);
 
   return returnObj
 }

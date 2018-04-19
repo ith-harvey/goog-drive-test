@@ -209,7 +209,7 @@ class IncomingCommand {
     if (1 <= dayProvided.isoWeekday() && dayProvided.isoWeekday() <= 5) {
       return this.buildEventWeek(dayProvided)
 
-    } else if (6 === dayProvided.isoWeekday() || dayProvided.isoWeekday() === 7) {
+    } else if (6 === dayProvbided.isoWeekday() || dayProvided.isoWeekday() === 7) {
       console.log('returning error! from setScope');
       return { err: 'I don\'t support week queries that land on weekend dates. To retrieve weekend meeting suggestions please use the single day query: `@doge cal suggest <users(optional)> <month> <day>`.' }
     }

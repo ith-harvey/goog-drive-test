@@ -23,7 +23,8 @@ class CreateSuggestion {
 
   generateThreeWholeAvail(timeWindowStart, timeWindowEnd, requestersTimeZone) {
 
-    let endTime, arr
+    let endTime
+    let arr
     let dateRequested = timeWindowStart
 
     let diff = (start, end) => moment.duration(end.diff(start)).asMinutes()
@@ -125,6 +126,7 @@ class CreateSuggestion {
     }
 
     this.recurseToFindSuggest(availArr, timeZone, '', {})
+
     // this.sortSuggestsChronologically(this.get())
 
     return this.get()

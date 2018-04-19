@@ -1,15 +1,12 @@
 // jscs:disable requireSemicolons
 // jscs:disable maximumLineLength
 
-
 const momentTZ = require('moment-timezone');
 const moment = require('moment');
 const rp = require('request-promise');
 const ical2json = require('ical2json');
 const CreateAvailability = require('./RecordAvailability.js');
-
 const Time = require('./Time.js');
-
 
 /**
    * findAvailability()
@@ -25,7 +22,8 @@ const Time = require('./Time.js');
 const findAvailability = (eventArr, wrkHrs, dateAvailRequested, Availability) => {
   let i = 0
   let currEvent = eventArr[i]
-  let eventStart, eventEnd
+  let eventStart
+  let eventEnd
 
   // using function to compare event to workingHours
   eventStart = Time.formatDate(wrkHrs.timeZone, currEvent.DTSTART)
@@ -35,8 +33,7 @@ const findAvailability = (eventArr, wrkHrs, dateAvailRequested, Availability) =>
 
     if (eventStart.isSame(wrkHrs.start, 'day')) {
 
-
-      if (eventStart.isSameOrBefore(wrkHrs.start,'minutes')) {
+      if (eventStart.isSameOrBefore(wrkHrs.start, 'minutes')) {
         // event start happens before || same time as wrkhrs start
 
         if (eventEnd.isSameOrBefore(wrkHrs.start, 'minutes')) {
@@ -44,7 +41,7 @@ const findAvailability = (eventArr, wrkHrs, dateAvailRequested, Availability) =>
           // the entire event happens before working hours
           // do nothing -> go to next event
 
-        } else if (eventEnd.isSameOrAfter(wrkHrs.end,'minutes')) {
+        } else if (eventEnd.isSameOrAfter(wrkHrs.end, 'minutes')) {
           // event books out the entire day!
           Availability.wholeDayIsBooked(wrkHrs)
 
@@ -66,14 +63,13 @@ const findAvailability = (eventArr, wrkHrs, dateAvailRequested, Availability) =>
         }
 
       }
-    } else {
-      // console.log('Do nothing event doesnt match day requested')
     }
 
     if (eventArr.length - 1 === i) break
 
     i++
     currEvent = eventArr[i]
+
     // using function to compare event to wrkingHours
     eventStart = Time.formatDate(wrkHrs.timeZone, currEvent.DTSTART)
     eventEnd = Time.formatDate(wrkHrs.timeZone, currEvent.DTEND)
@@ -93,8 +89,6 @@ const findAvailability = (eventArr, wrkHrs, dateAvailRequested, Availability) =>
 
   return Availability.get()
 }
-
-
 
 function checkIfUserIsSetup(robot, userId) {
   // input validation function
@@ -127,7 +121,6 @@ function selectRandomStartTimes(startTimesArr) {
     return Math.floor(Math.random() * (max - min + 1) + min)
   }
 
-
   let recurseToSelectTimes = (origStartTimeArr, randomStartTimeArr, randomStartTimeObj) => {
 
     if (randomStartTimeArr.length === 3) {
@@ -147,29 +140,28 @@ function selectRandomStartTimes(startTimesArr) {
   return recurseToSelectTimes(startTimesArr, randomStartTime.Arr, randomStartTime.Obj)
 }
 
-
 function completeUserInformation(robot, userInfoArr, UserArray, Command) {
 
-  UserArray.arr.forEach( (User, i) => {
+  UserArray.arr.forEach((User, i) => {
 
-  let output = ical2json.convert(userInfoArr[i]);
+    let output = ical2json.convert(userInfoArr[i]);
 
-  if (!output.VCALENDAR[0].VEVENT) {
-    console.log('This user has no events in their calendar -> inserting fake event.')
-    output.VCALENDAR[0].VEVENT = [ { DTEND: '20180413T000000Z',
-    DTSTAMP: '20180418T151757Z',
-    DTSTART: '20180412T160000Z',
-    SEQUENCE: '0',
-    TRANSP: 'OPAQUE',
-    UID: 'user was didnt have any events in their calendar this is a fake entry' }]
-  }
+    if (!output.VCALENDAR[0].VEVENT) {
+      output.VCALENDAR[0].VEVENT = [{ DTEND: '20180413T000000Z',
+        DTSTAMP: '20180418T151757Z',
+        DTSTART: '20180412T160000Z',
+        SEQUENCE: '0',
+        TRANSP: 'OPAQUE',
+        UID: 'user was didnt have any events in their calendar this is a fake entry', },
+      ]
+    }
 
-  let data = {
-    eventArr: output.VCALENDAR[0].VEVENT,
-    timeZone: output.VCALENDAR[0]['X-WR-TIMEZONE'],
-  }
+    let data = {
+      eventArr: output.VCALENDAR[0].VEVENT,
+      timeZone: output.VCALENDAR[0]['X-WR-TIMEZONE'],
+    }
 
-  User.add('timeZone', data.timeZone).add('calBusyArr', data.eventArr).setDatesRequested(momentTZ().tz(data.timeZone), Command)
+    User.add('timeZone', data.timeZone).add('calBusyArr', data.eventArr).setDatesRequested(momentTZ().tz(data.timeZone), Command)
 
   })
 
@@ -180,5 +172,5 @@ module.exports = {
   selectRandomStartTimes,
   checkIfUserIsSetup,
   findAvailability,
-  completeUserInformation
+  completeUserInformation,
 }
