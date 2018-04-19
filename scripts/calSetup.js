@@ -69,7 +69,7 @@ function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZon
     return `\n *${dayOfWeekBold} ${justDate}*`
   }
 
-  let dayIsFullyBooked = (dayRequested) => buildDayHeader(dayRequested) + '\n Ruh ro... This day is already fully booked. :( \n'
+  let dayIsFullyBooked = (dayRequested) => buildDayHeader(dayRequested) + '\n This day is fully booked. :( \n'
 
   let suggestString = ''
   let daySuggestionArr
@@ -126,12 +126,19 @@ module.exports = (robot) => {
     if (awaitingUrl) {
       msg.message.text = checkIfDMOrPublic(msg.message.text)
 
-      robot.brain.set(msg.message.user.id, { busyCalUrl: msg.message.text })
+      rp(msg.message.text).then( response => {
+        robot.brain.set(msg.message.user.id, { busyCalUrl: msg.message.text })
 
-      msg.reply('URL was received... \n \n Excellent, now I need to know your preferred working hours when you will be available for meetings. \n \n Enter them in 24hr format: <HH:mm>-<HH:mm> (e.g. 09:00-17:00)')
+        msg.reply('URL was received... \n \n Excellent, now I need to know your preferred working hours when you will be available for meetings. \n \n Enter them in 24hr format: <HH:mm>-<HH:mm> (e.g. 09:00-17:00)')
 
-      awaitingUrl = false
-      awaitingWorkHours = true
+        awaitingUrl = false
+        awaitingWorkHours = true
+      }).catch( err => {
+        console.log('err', err);
+        msg.reply('Uh oh, it looks like there was an error when trying to retreive your busy calendar information... Did you hit save in the top left after you checked the free/busy information box? \n \n Please try to reenter your free/busy URL again -> (To access your free/busy calendar URL visit www.fastmail.com/calendar/ while logged in.\n Select the calendar dropdown > settings > calendars > Edit&share > check free/busy information > copy the url > hit save up top > paste URL in chat and hit enter)')
+      })
+
+
     }
   })
 
@@ -148,7 +155,7 @@ module.exports = (robot) => {
       let compareEnd = compareprep(hrs[1])
 
       if ((compareEnd - compareStart) < 5) {
-        return msg.reply('Ruh ro... The times you have provided amount to less than five hours i.e. `09:00-13:00` or cross into the next day i.e. `17:00-4:00`. Please enter in work hours with a difference of five or more hours that don\'t cross into the next day. \n \n Enter them in a 24hr format: <HH:mm>-<HH:mm> (e.g. 09:00-17:00)')
+        return msg.reply('The times you have provided amount to less than five hours i.e. `09:00-13:00` or cross into the next day i.e. `17:00-4:00`. Please enter in work hours with a difference of five or more hours that don\'t cross into the next day. \n \n Enter them in a 24hr format: <HH:mm>-<HH:mm> (e.g. 09:00-17:00)')
       }
 
       robot.brain.set(msg.message.user.id, {
@@ -164,9 +171,6 @@ module.exports = (robot) => {
   })
 
   robot.respond(/(cal suggest)/i, function (msg) {
-    console.log('raw message cal suggest', msg.message.text);
-    // msg.message.text = checkIfDMOrPublic(msg.message.text)
-    // console.log('after check', msg.message.text);
 
     if (Misc.checkIfUserIsSetup(robot, msg.message.user.id)) {
       msg.reply('To use the `@doge cal suggest` feature you must first go through the setup wizard. Do so by typing the command `@doge cal setup`.')

@@ -5,6 +5,7 @@ const moment = require('moment');
 
 const ical2json = require('ical2json')
 const User = require('./User')
+const Misc = require('./Misc.js')
 const Time = require('./Time.js')
 
 class IncomingCommand {
@@ -31,7 +32,6 @@ class IncomingCommand {
     // this.DelegatorObject.add('meetingLengthInMinutes', 60)
     this.arrayOfUsers.addUser(new User.Individual(message.user.id))
 
-
     if (cmdArr.length - 1 === basicQuery) {
       this.saveQueryParsable('DayQueryNoDates')
       return this.arrayOfUsers.get()
@@ -39,6 +39,7 @@ class IncomingCommand {
 
     if (cmdArr[basicQuery + 1][0] === '@') {
       // run when additional users are added to a query
+
       let uNamePosition = basicQuery + 1
       let userIdArr = []
       let currUser = cmdArr[uNamePosition]
@@ -47,7 +48,9 @@ class IncomingCommand {
         currUser = currUser.substr(1)
 
         if (!robot.brain.usersForFuzzyName(currUser).length) {
-          return this.errorHandler('Ruh ro, either the user you have requested has not run the `@doge cal suggest setup` wizard or that user does not exist! For now try running a query without ' + currUser + '\'s username.')
+          return this.errorHandler('Either the user you have requested has not run the `@doge cal suggest setup` wizard or that user does not exist! For now try running a query without ' + '@' + currUser + '\'s username.')
+        } else if (Misc.checkIfUserIsSetup(robot, robot.brain.usersForFuzzyName(currUser)[0].id)) {
+          return this.errorHandler('Either the user you have requested has not run the `@doge cal suggest setup` wizard or that user does not exist! For now try running a query without ' + '@' + currUser + '\'s username.')
         }
 
         this.arrayOfUsers.addUser(new User.Individual(robot.brain.usersForFuzzyName(currUser)[0].id))
