@@ -54,7 +54,6 @@ const findAvailability = (eventArr, wrkHrs, dateAvailRequested, Availability) =>
 
         if (eventStart.isBefore(wrkHrs.end, 'minutes')) {
           // event start happens during work hours
-          console.log('gets in here');
           Availability.set(wrkHrs, eventEnd, eventStart)
 
         } else {
@@ -168,9 +167,62 @@ function completeUserInformation(robot, userInfoArr, UserArray, Command) {
   return UserArray.get()
 }
 
+function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZone, requestersDatesRequested, Command) {
+
+  let buildDayHeader = (dayOfWeek) => {
+    let dayOfWeekBold = dayOfWeek.format('dddd')
+    let justDate = dayOfWeek.format('LL')
+
+    return `\n *${dayOfWeekBold} ${justDate}*`
+  }
+
+  let dayIsFullyBooked = (dayRequested) => buildDayHeader(dayRequested) + '\n This day is fully booked. :( \n'
+
+  let suggestString = ''
+  let daySuggestionArr
+
+  mergedAvailArr.forEach(weekAvailability => {
+
+    weekAvailability.forEach((dayAvailability, i) => {
+
+      let Suggestion = new CreateSuggestion()
+
+      // this is our error day is booked -> just because first set of avails don't work doesn't mean the 2nd or third don't share avail
+      if (dayAvailability[0].dayIsBooked) {
+        suggestString += dayIsFullyBooked(requestersDatesRequested[i])
+        return
+
+      } else if (dayAvailability.length === 1) {
+        //run if the day's availability is 'whole' (not broken up)
+        if (dayAvailability[0].availEnd
+          .isSameOrBefore(dayAvailability[0].availStart)) {
+          suggestString += dayIsFullyBooked(requestersDatesRequested[i])
+          return
+        }
+
+        daySuggestionArr = Suggestion.generateThreeWholeAvail(dayAvailability[0].availStart, dayAvailability[0].availEnd, requestersTimeZone)
+
+      } else {
+        //run if the day's availability is 'broken up' (busy in the middle of the day)
+
+        daySuggestionArr = Suggestion.generateThreeSeperatedAvail(dayAvailability, requestersTimeZone)
+      }
+
+      suggestString += buildDayHeader(requestersDatesRequested[i])
+      daySuggestionArr.forEach(availWindow => {
+        suggestString += `\n${availWindow.localTime}\n ${availWindow.UTC}\n`
+      })
+
+    })
+  })
+
+  return `Here are some meeting suggestions for ${Command.getRequestedQuery()}:\n\n` + suggestString
+}
+
 module.exports = {
   selectRandomStartTimes,
   checkIfUserIsSetup,
   findAvailability,
   completeUserInformation,
+  dayVsWeekAvailLoopAndBuildSuggestions
 }

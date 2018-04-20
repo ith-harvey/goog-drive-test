@@ -56,25 +56,34 @@ class CreateSuggestion {
       this.add(requestersTimeZone, startTime, endTime)
     })
 
-    return this.get()
+    return this.sortSuggestsChronologically(this.get())
   }
 
-  // sortSuggestsChronologically (suggestions) {
-  //   console.log('in sortsuggest chron', suggestions);
-  //
-  //   if (suggestions.length < 2) {
-  //     // only one suggestion, purposless to sort
-  //     return
-  //   }
-  //
-  //   let chronSuggestions = [suggestions.pop()]
-  //   let i = 0
-  //
-  //
-  //   while (suggestions.length) {
-  //     if (chronSuggestions[i].rawStartTime.isSameOrBefore(suggestions[i].rawStartTime) )
-  //   }
-  // }
+  sortSuggestsChronologically (suggestions) {
+    if (suggestions.length < 2) {
+      // only one suggestion, purposless to sort
+      return
+    }
+
+    let chronSuggestions = [suggestions.pop()]
+    let i = 0
+
+    while (suggestions.length) {
+      if(chronSuggestions[i].rawStartTime
+        .isSameOrBefore(suggestions[0].rawStartTime) ) {
+          if (i === chronSuggestions.length - 1) {
+            chronSuggestions.splice(i + 1, 0, suggestions.shift())
+          } else {
+            i++
+          }
+
+      } else { // put in infront of curr item
+        chronSuggestions.splice(i, 0, suggestions.shift())
+      }
+    }
+
+    return this.replaceSuggestions(chronSuggestions)
+  }
 
   buildTestSuggestions(availArr, timeZone) {
 
@@ -119,23 +128,18 @@ class CreateSuggestion {
       availArr.forEach(currItem => {
         this.add(timeZone, currItem.rawStartTime, currItem.rawEndTime)
       })
-
-      // this.sortSuggestsChronologically(this.get())
-
-      return this.get()
+      
+      return this.sortSuggestsChronologically(this.get())
     }
 
     this.recurseToFindSuggest(availArr, timeZone, '', {})
 
-    // this.sortSuggestsChronologically(this.get())
-
-    return this.get()
+    return this.sortSuggestsChronologically(this.get())
   }
 
   add(timeZone, availStart, availEnd) {
 
     this.suggestionArr.push({
-
       localTime: `${timeZone}: ${moment(Time.localTime(availStart, timeZone), 'DD-MM-YYYY hh:mm:ss a').format('hh:mm:ss a')} - ${moment(Time.localTime(availEnd, timeZone), 'DD-MM-YYYY hh:mm:ss a').format('hh:mm:ss a')}`,
 
       UTC: `UTC: ${availStart} - ${availEnd}`,
@@ -148,16 +152,19 @@ class CreateSuggestion {
 
   testAdd(timeZone, availStart, availEnd) {
     return {
-
       localTime: `${timeZone}: ${moment(Time.localTime(availStart, timeZone), 'DD-MM-YYYY hh:mm:ss a').format('hh:mm:ss a')} - ${moment(Time.localTime(availEnd, timeZone), 'DD-MM-YYYY hh:mm:ss a').format('hh:mm:ss a')}`,
 
       UTC: `UTC: ${availStart} - ${availEnd}`,
 
       rawStartTime: availStart,
-
       rawEndTime: availEnd,
     }
 
+  }
+
+  replaceSuggestions(chronSuggestions) {
+    this.suggestionArr = chronSuggestions
+    return this.suggestionArr
   }
 
   get() { return this.suggestionArr}

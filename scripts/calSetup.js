@@ -52,7 +52,6 @@ function setupFindAvailability(robot, UserArray) {
   })
 
   return allUsersAvailability
-
 }
 
 function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZone, requestersDatesRequested, Command) {
@@ -61,8 +60,7 @@ function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZon
     let dayOfWeekBold = dayOfWeek.format('dddd')
     let justDate = dayOfWeek.format('LL')
 
-    return `
- *${dayOfWeekBold} ${justDate}*`
+    return `\n *${dayOfWeekBold} ${justDate}*`
   }
 
   let dayIsFullyBooked = (dayRequested) => buildDayHeader(dayRequested) + '\n This day is fully booked. :( \n'
@@ -76,13 +74,12 @@ function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZon
 
       let Suggestion = new CreateSuggestion()
 
-      // this is our error day is booked -> just because first set of avails don't work doesn't mean the 2nd or third don't share avail
       if (dayAvailability[0].dayIsBooked) {
         suggestString += dayIsFullyBooked(requestersDatesRequested[i])
         return
 
       } else if (dayAvailability.length === 1) {
-        //run if the day's availability is 'whole' (not broken up)
+        //run if the day's availability is 'whole' (not busy in middle of the day)
         if (dayAvailability[0].availEnd
           .isSameOrBefore(dayAvailability[0].availStart)) {
           suggestString += dayIsFullyBooked(requestersDatesRequested[i])
@@ -93,23 +90,19 @@ function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZon
 
       } else {
         //run if the day's availability is 'broken up' (busy in the middle of the day)
+
         daySuggestionArr = Suggestion.generateThreeSeperatedAvail(dayAvailability, requestersTimeZone)
       }
 
       suggestString += buildDayHeader(requestersDatesRequested[i])
       daySuggestionArr.forEach(availWindow => {
-        suggestString += `
- ${availWindow.localTime}
-        ${availWindow.UTC}
-`
+        suggestString += `\n${availWindow.localTime}\n ${availWindow.UTC}\n`
       })
 
     })
   })
 
-  return `Here are some meeting suggestions for ${Command.getRequestedQuery()}:
-
-` + suggestString
+  return `Here are some meeting suggestions for ${Command.getRequestedQuery()}:\n\n` + suggestString
 }
 
 module.exports = (robot) => {
@@ -185,7 +178,7 @@ module.exports = (robot) => {
         Promise.all(userInfoPromiseArr).then(userInfoArr => {
           let response = []
 
-          // Uses get request above to complete User information
+          // Uses GET request above to complete user information
           UserArray = Misc.completeUserInformation(robot, userInfoArr, UserArray, Command)
 
           if (UserArray.error) {
