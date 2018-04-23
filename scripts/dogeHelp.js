@@ -4,13 +4,9 @@ const split = sep => str => str.split(sep);
 const spaceSplit = split(' ')
 const purifyArray = array => array.slice()
 
-const remove = item => array => {
-  const arr = purifyArray(array)
-  return arr.slice((arr.indexOf(item) + 1), arr.length)
-}
+const remove = item => array => array.slice((array.indexOf(item) + 1), array.length)
 
 const removeDoge = remove('@doge')
-
 const parseCommand = cmdArray => {
   if ((cmdArray[0] === 'help') && (cmdArray.length === 1)) {
     return Helptxt.basic()
