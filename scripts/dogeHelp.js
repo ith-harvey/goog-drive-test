@@ -16,6 +16,8 @@ const parseCommand = cmdArray => {
     return Helptxt.basic()
   } else if (cmdArray[1] === 'cal') {
     return Helptxt.cal()
+  } else {
+    return Helptxt.basic()
   }
 }
 
