@@ -48,7 +48,11 @@ class CreateSuggestion {
 
     if (diff(timeWindowStart, timeWindowEnd) > 180) {
       // if start - end hr diff is 4 or more select at random
-      arr = Misc.selectRandomStartTimes(arr)
+      arr = this.selectRandomStartTimes(arr)
+    }
+
+    if (diff(timeWindowStart, timeWindowEnd) < 60)  {
+      return {error: 'timeslot < 60 min'}
     }
 
     arr.forEach(startTime =>  {
@@ -62,7 +66,7 @@ class CreateSuggestion {
   sortSuggestsChronologically (suggestions) {
     if (suggestions.length < 2) {
       // only one suggestion, purposless to sort
-      return
+      return suggestions
     }
 
     let chronSuggestions = [suggestions.pop()]
@@ -128,7 +132,7 @@ class CreateSuggestion {
       availArr.forEach(currItem => {
         this.add(timeZone, currItem.rawStartTime, currItem.rawEndTime)
       })
-      
+
       return this.sortSuggestsChronologically(this.get())
     }
 
@@ -168,6 +172,37 @@ class CreateSuggestion {
   }
 
   get() { return this.suggestionArr}
+
+  selectRandomStartTimes(startTimesArr) {
+
+    let randomStartTime = {
+      Obj: {},
+      Arr: [],
+    }
+
+    const randomIntFromInterval = (min, max) => {
+      max = max - 1
+      return Math.floor(Math.random() * (max - min + 1) + min)
+    }
+
+    const recurseToSelectTimes = (origStartTimeArr, randomStartTimeArr, randomStartTimeObj) => {
+
+      if (randomStartTimeArr.length === 3) {
+        return randomStartTimeArr
+      }
+
+      let i = randomIntFromInterval(0, origStartTimeArr.length)
+
+      if (!randomStartTimeObj[origStartTimeArr[i]]) {
+        randomStartTimeObj[origStartTimeArr[i]] = true
+        randomStartTimeArr.push(origStartTimeArr[i])
+      }
+
+      return recurseToSelectTimes(origStartTimeArr, randomStartTimeArr, randomStartTimeObj)
+    }
+
+    return recurseToSelectTimes(startTimesArr, randomStartTime.Arr, randomStartTime.Obj)
+  }
 
 }
 

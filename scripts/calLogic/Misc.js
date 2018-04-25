@@ -6,7 +6,33 @@ const moment = require('moment');
 const rp = require('request-promise');
 const ical2json = require('ical2json');
 const CreateAvailability = require('./RecordAvailability.js');
+const CreateSuggestion = require('./RecordSuggestion.js')
 const Time = require('./Time.js');
+
+
+
+function setupFindAvailability(robot, UserArray) {
+  let allUsersAvailability = []
+
+  UserArray.arr.forEach((User, i) => {
+    // loop over each user
+
+    allUsersAvailability.push(User.datesRequested.map((dayToCheck) => {
+
+        let Availability = new CreateAvailability()
+
+        let wrkHrsInUTC = Time.wrkHrsParse(robot.brain.get(User.userId).workHrs, User.timeZone, dayToCheck)
+
+        // findAvailOverTime -> requires the entire event arr for that person
+        return findAvailability(User.calBusyArr, wrkHrsInUTC, dayToCheck, Availability)
+      }))
+  })
+
+  return allUsersAvailability
+}
+
+
+
 
 /**
    * findAvailability()
@@ -19,7 +45,8 @@ const Time = require('./Time.js');
    * @returns Nothing - calls Availability.set() method
 **/
 
-const findAvailability = (eventArr, wrkHrs, dateAvailRequested, Availability) => {
+
+function findAvailability (eventArr, wrkHrs, dateAvailRequested, Availability) {
   let i = 0
   let currEvent = eventArr[i]
   let eventStart
@@ -108,36 +135,7 @@ function checkIfUserIsSetup(robot, userId) {
   return false // user is already setup for cal suggest feature
 }
 
-function selectRandomStartTimes(startTimesArr) {
 
-  let randomStartTime = {
-    Obj: {},
-    Arr: [],
-  }
-
-  let randomIntFromInterval = (min, max) => {
-    max = max - 1
-    return Math.floor(Math.random() * (max - min + 1) + min)
-  }
-
-  let recurseToSelectTimes = (origStartTimeArr, randomStartTimeArr, randomStartTimeObj) => {
-
-    if (randomStartTimeArr.length === 3) {
-      return randomStartTimeArr
-    }
-
-    let i = randomIntFromInterval(0, origStartTimeArr.length)
-
-    if (!randomStartTimeObj[origStartTimeArr[i]]) {
-      randomStartTimeObj[origStartTimeArr[i]] = true
-      randomStartTimeArr.push(origStartTimeArr[i])
-    }
-
-    return recurseToSelectTimes(origStartTimeArr, randomStartTimeArr, randomStartTimeObj)
-  }
-
-  return recurseToSelectTimes(startTimesArr, randomStartTime.Arr, randomStartTime.Obj)
-}
 
 function completeUserInformation(robot, userInfoArr, UserArray, Command) {
 
@@ -187,13 +185,14 @@ function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZon
 
       let Suggestion = new CreateSuggestion()
 
-      // this is our error day is booked -> just because first set of avails don't work doesn't mean the 2nd or third don't share avail
       if (dayAvailability[0].dayIsBooked) {
         suggestString += dayIsFullyBooked(requestersDatesRequested[i])
         return
 
       } else if (dayAvailability.length === 1) {
-        //run if the day's availability is 'whole' (not broken up)
+        //run if the day's availability is 'whole' (not busy in middle of the day)
+
+
         if (dayAvailability[0].availEnd
           .isSameOrBefore(dayAvailability[0].availStart)) {
           suggestString += dayIsFullyBooked(requestersDatesRequested[i])
@@ -201,6 +200,11 @@ function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZon
         }
 
         daySuggestionArr = Suggestion.generateThreeWholeAvail(dayAvailability[0].availStart, dayAvailability[0].availEnd, requestersTimeZone)
+
+        if (daySuggestionArr.error) {
+          suggestString += dayIsFullyBooked(requestersDatesRequested[i])
+          return
+        }
 
       } else {
         //run if the day's availability is 'broken up' (busy in the middle of the day)
@@ -219,10 +223,11 @@ function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZon
   return `Here are some meeting suggestions for ${Command.getRequestedQuery()}:\n\n` + suggestString
 }
 
+
 module.exports = {
-  selectRandomStartTimes,
+  dayVsWeekAvailLoopAndBuildSuggestions,
   checkIfUserIsSetup,
   findAvailability,
+  setupFindAvailability,
   completeUserInformation,
-  dayVsWeekAvailLoopAndBuildSuggestions
 }

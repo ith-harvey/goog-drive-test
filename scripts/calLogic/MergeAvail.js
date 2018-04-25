@@ -16,6 +16,10 @@ class Merge {
     }
   }
 
+  static diff (start, end) {
+    return moment.duration(end.diff(start)).asMinutes()
+  }
+
   static availability(user1, user2) {
 
     let mergedAvailArr = []
@@ -28,10 +32,39 @@ class Merge {
 
       let compare = this.prepEventsForComparison(largerNumOfAvailWindows, user1[i][0], user1[i], user2[i][0], user2[i])
 
-      mergedAvailArr.push(this.compareAvailability(compare, Availability))
+      mergedAvailArr.push(
+        this.checkForOverlapBooking(
+          this.compareAvailability(compare, Availability)
+        )
+      )
     }
 
     return mergedAvailArr
+
+  }
+
+  static checkForOverlapBooking(dayAvailArr) {
+
+    let availabilityArr = []
+    let dayIsBookedTally = 0
+
+    dayAvailArr.forEach( dayAvail => {
+      if (!dayAvail.timeWindowIsBooked) {
+        availabilityArr.push(dayAvail)
+      } else {
+        dayIsBookedTally ++
+      }
+    })
+
+    if (dayIsBookedTally === dayAvailArr.length) {
+      // all windows coming back overlap to create a booked schedule
+      let copyOfDay = JSON.parse(JSON.stringify(dayAvailArr[0]));
+      delete copyOfDay.timeWindowIsBooked
+      copyOfDay.dayIsBooked = true
+      return [copyOfDay]
+    }
+
+    return availabilityArr
 
   }
 
@@ -129,7 +162,14 @@ class Merge {
         mergeEventToPush.end = user2Ev.end
       }
 
-      Availability.add(mergeEventToPush.start, mergeEventToPush.end)
+      // two users times overlap to create booked || availability is less than 60 minutes
+      if ( (mergeEventToPush.end.isSameOrBefore(mergeEventToPush.start))
+      || (this.diff(mergeEventToPush.start, mergeEventToPush.end) < 60)) {
+        Availability.add(mergeEventToPush.start, mergeEventToPush.end, 'timeWindowIsBooked')
+      } else {
+        Availability.add(mergeEventToPush.start, mergeEventToPush.end)
+      }
+
     }
 
     return Availability.get()

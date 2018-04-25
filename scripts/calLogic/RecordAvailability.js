@@ -30,12 +30,10 @@ class CreateAvailability {
   }
 
   setUntilEndOfWorkDay(wrkHrs) {
-    // console.log('set until end of work day', wrkHrs);
     this.add(this.lastEventEndTime, wrkHrs.end)
   }
 
   dayIsFreeAddAvail(wrkHrs) {
-    // console.log('day is free adda vil', wrkHrs);
     this.add(wrkHrs.start, wrkHrs.end, 'dayIsFree')
   }
 
@@ -43,14 +41,13 @@ class CreateAvailability {
     this.add(wrkHrs.start, wrkHrs.end, 'dayIsBooked')
   }
 
-  add (availStart, availEnd, dayIsFreeOrBooked) {
-    // console.log('problem is here', availStart);
+  add (availStart, availEnd, additionalArg) {
     let availabilityObj = {
       availStart: availStart,
       availEnd: availEnd,
     }
 
-    if (dayIsFreeOrBooked) availabilityObj[dayIsFreeOrBooked] = true
+    if (additionalArg) availabilityObj[additionalArg] = true
 
     this.availabilityArr.push(availabilityObj)
   }

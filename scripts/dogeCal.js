@@ -34,77 +34,6 @@ const Misc = require('./calLogic/Misc.js')
 
 let checkIfDMOrPublic = (msg) => msg.split(' ')[1] ? msg.split(' ')[1] : msg.split(' ')[0] // if in DM the mssge has an added 'doge' string -> this gets rid of it
 
-function setupFindAvailability(robot, UserArray) {
-  let allUsersAvailability = []
-
-  UserArray.arr.forEach((User, i) => {
-    // loop over each user
-
-    allUsersAvailability.push(User.datesRequested.map((dayToCheck) => {
-
-        let Availability = new CreateAvailability()
-
-        let wrkHrsInUTC = Time.wrkHrsParse(robot.brain.get(User.userId).workHrs, User.timeZone, dayToCheck)
-
-        // findAvailOverTime -> requires the entire event arr for that person
-        return Misc.findAvailability(User.calBusyArr, wrkHrsInUTC, dayToCheck, Availability)
-      }))
-  })
-
-  return allUsersAvailability
-}
-
-function dayVsWeekAvailLoopAndBuildSuggestions(mergedAvailArr, requestersTimeZone, requestersDatesRequested, Command) {
-
-  let buildDayHeader = (dayOfWeek) => {
-    let dayOfWeekBold = dayOfWeek.format('dddd')
-    let justDate = dayOfWeek.format('LL')
-
-    return `\n *${dayOfWeekBold} ${justDate}*`
-  }
-
-  let dayIsFullyBooked = (dayRequested) => buildDayHeader(dayRequested) + '\n This day is fully booked. :( \n'
-
-  let suggestString = ''
-  let daySuggestionArr
-
-  mergedAvailArr.forEach(weekAvailability => {
-
-    weekAvailability.forEach((dayAvailability, i) => {
-
-      let Suggestion = new CreateSuggestion()
-
-      if (dayAvailability[0].dayIsBooked) {
-        suggestString += dayIsFullyBooked(requestersDatesRequested[i])
-        return
-
-      } else if (dayAvailability.length === 1) {
-        //run if the day's availability is 'whole' (not busy in middle of the day)
-        if (dayAvailability[0].availEnd
-          .isSameOrBefore(dayAvailability[0].availStart)) {
-          suggestString += dayIsFullyBooked(requestersDatesRequested[i])
-          return
-        }
-
-        daySuggestionArr = Suggestion.generateThreeWholeAvail(dayAvailability[0].availStart, dayAvailability[0].availEnd, requestersTimeZone)
-
-      } else {
-        //run if the day's availability is 'broken up' (busy in the middle of the day)
-
-        daySuggestionArr = Suggestion.generateThreeSeperatedAvail(dayAvailability, requestersTimeZone)
-      }
-
-      suggestString += buildDayHeader(requestersDatesRequested[i])
-      daySuggestionArr.forEach(availWindow => {
-        suggestString += `\n${availWindow.localTime}\n ${availWindow.UTC}\n`
-      })
-
-    })
-  })
-
-  return `Here are some meeting suggestions for ${Command.getRequestedQuery()}:\n\n` + suggestString
-}
-
 module.exports = (robot) => {
 
   let awaitingUrl = false
@@ -115,6 +44,7 @@ module.exports = (robot) => {
     msg.reply('Welcome to the cal setup wizard. \n \n Please enter your fastmail account’s free/busy calendar URL so I can share your availability upon request.\n\n (To access your free/busy calendar URL visit www.fastmail.com/calendar/ while logged in.\n Select the calendar dropdown > settings > calendars > Edit&share > check free/busy information > copy the url > hit save up top > paste URL in chat and hit enter)')
     awaitingUrl = true
   })
+
 
   robot.hear(/https/i, function (msg) {
     if (awaitingUrl) {
@@ -175,24 +105,24 @@ module.exports = (robot) => {
 
         let userInfoPromiseArr = UserArray.arr.map(user => new Promise((resolve, reject) => resolve(rp(robot.brain.get(user.userId).busyCalUrl))))
 
-        Promise.all(userInfoPromiseArr).then(userInfoArr => {
+        Promise.all(userInfoPromiseArr).then(userInfoArr => {  // response to GET user info
           let response = []
 
-          // Uses GET request above to complete user information
+
           UserArray = Misc.completeUserInformation(robot, userInfoArr, UserArray, Command)
 
           if (UserArray.error) {
             return msg.reply(UserArray.error)
           }
 
-          // sets up and calls findAvailability
-          return setupFindAvailability(robot, UserArray)
+          return Misc.setupFindAvailability(robot, UserArray)
 
-        }).then(allUsersAvailability => {
-          console.log('allUsersAvailability pre merge:');
-          allUsersAvailability.forEach(user => {
-            console.log(user);
-          })
+        }).then(allUsersAvailability => { // receive users availability
+
+          // console.log('allUsersAvailability pre merge:');
+          // allUsersAvailability.forEach(user => {
+          //   console.log(user);
+          // })
 
           if (UserArray.arr.length > 1) {
             // if more than one users info is supplied -> merge availability
@@ -204,9 +134,14 @@ module.exports = (robot) => {
             }
           }
 
+          console.log('allUsersAvailability post merge:');
+          allUsersAvailability.forEach(user => {
+            console.log(user);
+          })
+
           msg.reply('Your current Timezone (set at fastmail.com): ' + UserArray.arr[0].get().timeZone)
 
-          msg.reply(dayVsWeekAvailLoopAndBuildSuggestions(allUsersAvailability, UserArray.arr[0].get().timeZone, UserArray.arr[0].get().datesRequested, Command))
+          msg.reply(Misc.dayVsWeekAvailLoopAndBuildSuggestions(allUsersAvailability, UserArray.arr[0].get().timeZone, UserArray.arr[0].get().datesRequested, Command))
 
         }).catch(err => {
           console.log('err', err)

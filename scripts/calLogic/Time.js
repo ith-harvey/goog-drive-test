@@ -7,6 +7,16 @@ const moment = require('moment');
 const getTodaysDate = currentTimeZone => moment.utc()
 const minutesOfDay = m => m.minutes() + m.hours() * 60;
 
+
+module.exports = {
+  getTodaysDate,
+  minutesOfDay,
+  localTime,
+  formatDate,
+  wrkHrsParse,
+  interpDate,
+}
+
 function interpDate(month, day) {
   return moment().month(month).date(day).hour(00).minutes(00).seconds(00)
 }
@@ -61,13 +71,4 @@ function wrkHrsParse(wrkHrs, timeZone, dayRequested) {
   }
 
   return returnObj
-}
-
-module.exports = {
-  getTodaysDate,
-  minutesOfDay,
-  localTime,
-  formatDate,
-  wrkHrsParse,
-  interpDate,
 }
