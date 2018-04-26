@@ -3,23 +3,6 @@
 // jscs:disable maximumLineLength
 // @doge calendar setup and calendar feature script
 
-/* First things first set your environment variables in the root folder:
-* export ROCKETCHAT_ROOM=''
-* export LISTEN_ON_ALL_PUBLIC=true
-* export RESPOND_TO_DM=true
-* export ROCKETCHAT_USER=doge
-* export ROCKETCHAT_PASSWORD=doge
-* export ROCKETCHAT_URL=159.65.101.16:3000
-* export NODE_VERSION=default
-*
-* To setup doge run:
-* @doge cal setup - and follow the remaining prompts
-*
-* Once @doge is setup run:
-* @doge cal suggest - receive 3 meeting suggestions for the current day
-*
-*/
-
 const momentTZ = require('moment-timezone');
 const moment = require('moment');
 
@@ -44,7 +27,6 @@ module.exports = (robot) => {
     msg.reply('Welcome to the cal setup wizard. \n \n Please enter your fastmail account’s free/busy calendar URL so I can share your availability upon request.\n\n (To access your free/busy calendar URL visit www.fastmail.com/calendar/ while logged in.\n Select the calendar dropdown > settings > calendars > Edit&share > check free/busy information > copy the url > hit save up top > paste URL in chat and hit enter)')
     awaitingUrl = true
   })
-
 
   robot.hear(/https/i, function (msg) {
     if (awaitingUrl) {
