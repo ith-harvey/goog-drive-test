@@ -25,11 +25,11 @@ Environment variables to be set in the root folder:
 
 (To learn more about environment variables and how they effect Hubot look at the Rocket.Chat Hubot github: https://github.com/RocketChat/hubot-rocketchat)
 
-Note this bot has already been modified to work specifically with Rocket Chat in the bin/hubot file:
+Note this bot has already been modified to work specifically with Rocket Chat in the `./bin/hubot` file:
 
 `exec node_modules/.bin/hubot --name "doge" --adapter "rocketchat"`
 
-Since we have already set our adapter in the ./bin/hubot file above, you can start doge by running the following command from the root folder:
+Since we have already set our adapter in the `./bin/hubot` file above, you can start doge by running the following command from the root folder:
 
     % bin/hubot
 
@@ -40,26 +40,31 @@ You'll see some start up output and a prompt:
 
 Then you can interact with doge by typing `@doge help`.
 
-    doge> doge help
-    doge animate me <query> - The same thing as `image me`, except adds [snip]
-    doge help - Displays all of the help commands that doge knows about.
-    ...
+    To get more specific information regarding which feature of the `@doge` bot you are having trouble with please run one of the following commands:
+
+    `@doge help cal` : help with the calendar bot
 
 ### Commands
 
-The `@doge cal suggest` bot is a meeting query tool that finds availability in users schedules and responds with suggested meeting times.
-
 There are several commands which allow you to change the window of your suggestion and the users (who are already setup) it includes. The commands are as follows:
 
-`@doge cal setup` : starts the setup wizard to get users up and running with the cal bot.
-`@doge cal suggest` : provides available meeting suggestions for today.
-`@doge cal suggest week` : provides available meeting suggestions for this week.
-`@doge cal suggest <month> <day>` : provides available meeting suggestions for the specified day.
-`@doge cal suggest week <month> <day>` : provides available meeting suggestions for that week starting on the specified day.
-`@doge cal suggest <users>` : provides available meeting suggestions for all included users, today.
-`@doge cal suggest <users> <month> <day>` : provides available meeting suggestions for all included users on the specified day.
-`@doge cal suggest <users> week` : provides available meeting suggestions for all included users on that week.
-`@doge cal suggest <users> week <month> <day>` : provides available meeting suggestions for all included users for that week, starting on the specified day.
+    `@doge cal setup` : starts the setup wizard to get users up and running with the cal bot.
+
+    `@doge cal suggest` : provides available meeting suggestions for today.
+
+    `@doge cal suggest week` : provides available meeting suggestions for this week.
+
+    `@doge cal suggest <month> <day>` : provides available meeting suggestions for the specified day.
+
+    `@doge cal suggest week <month> <day>` : provides available meeting suggestions for that week starting on the specified day.
+
+    `@doge cal suggest <users>` : provides available meeting suggestions for all included users, today.
+
+    `@doge cal suggest <users> <month> <day>` : provides available meeting suggestions for all included users on the specified day.
+
+    `@doge cal suggest <users> week` : provides available meeting suggestions for all included users on that week.
+    
+    `@doge cal suggest <users> week <month> <day>` : provides available meeting suggestions for all included users for that week, starting on the specified day.
 
 ### pre-existing hubot-scripts
 
