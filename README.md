@@ -48,23 +48,15 @@ Then you can interact with doge by typing `@doge help`.
 
 There are several commands which allow you to change the window of your suggestion and the users (who are already setup) it includes. The commands are as follows:
 
-    `@doge cal setup` : starts the setup wizard to get users up and running with the cal bot.
-
-    `@doge cal suggest` : provides available meeting suggestions for today.
-
-    `@doge cal suggest week` : provides available meeting suggestions for this week.
-
-    `@doge cal suggest <month> <day>` : provides available meeting suggestions for the specified day.
-
-    `@doge cal suggest week <month> <day>` : provides available meeting suggestions for that week starting on the specified day.
-
-    `@doge cal suggest <users>` : provides available meeting suggestions for all included users, today.
-
-    `@doge cal suggest <users> <month> <day>` : provides available meeting suggestions for all included users on the specified day.
-
-    `@doge cal suggest <users> week` : provides available meeting suggestions for all included users on that week.
-    
-    `@doge cal suggest <users> week <month> <day>` : provides available meeting suggestions for all included users for that week, starting on the specified day.
+* `@doge cal setup` : starts the setup wizard to get users up and running with the cal bot.
+* `@doge cal suggest` : provides available meeting suggestions for today.
+* `@doge cal suggest week` : provides available meeting suggestions for this week.
+* `@doge cal suggest <month> <day>` : provides available meeting suggestions for the specified day.
+* `@doge cal suggest week <month> <day>` : provides available meeting suggestions for that week starting on the specified day.
+* `@doge cal suggest <users>` : provides available meeting suggestions for all included users, today.
+* `@doge cal suggest <users> <month> <day>` : provides available meeting suggestions for all included users on the specified day.
+* `@doge cal suggest <users> week` : provides available meeting suggestions for all included users on that week.
+* `@doge cal suggest <users> week <month> <day>` : provides available meeting suggestions for all included users for that week, starting on the specified day.
 
 ### pre-existing hubot-scripts
 
