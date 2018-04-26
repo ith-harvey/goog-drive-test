@@ -1,4 +1,8 @@
 # doge Bot
+
+![alt text](https://raw.githubusercontent.com/username/projectname/branch/path/to/img.png)
+
+
 doge is a chat bot built on the [Hubot][hubot] framework. The `@doge cal suggest` bot is a meeting query tool that finds availability in users schedules and responds with suggested meeting times. It is designed to work with the fast-mail API ([www.fastmail.com](https://www.fastmail.com/)) which provides a busy calendar URL.
 
 This README is intended to help get you started.
