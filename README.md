@@ -87,7 +87,7 @@ from `external-scripts.json` and you don't need to worry about redis at all.
 ## Adapters
 
 Adapters are the interface to the service you want your hubot to run on, such
-as Campfire or IRC. There are a number of third party adapters that the
+as Campfire, Slack or IRC. There are a number of third party adapters that the
 community have contributed. Check [Hubot Adapters][hubot-adapters] for the
 available ones.
 
@@ -95,7 +95,7 @@ If you would like to run a non-Campfire or shell adapter you will need to add
 the adapter package as a dependency to the `package.json` file in the
 `dependencies` section.
 
-Once you've added the dependency with `npm install --save` to install it you
+Once you've added the dependency with `npm install --save` to install it and edited the `./bin/hubot` file (see above) you
 can then run hubot with the adapter.
 
     % bin/hubot -a <adapter>
