@@ -1,4 +1,4 @@
-# doge Bot
+# A hubot bot named doge
 
 ![alt text](https://github.com/ith-harvey/hubot-fastmail-cal/blob/master/imgs/dog2.png)
 
@@ -157,11 +157,7 @@ Add the subdomain hubot should connect to. If you web URL looks like
 
 [hubot-adapters]: https://github.com/github/hubot/blob/master/docs/adapters.md
 
-## Restart the bot
-
-You may want to get comfortable with `heroku logs` and `heroku restart` if
-you're having issues.
-
 ## More information on Hubot:
+
 [hubot]: http://hubot.github.com
 [generator-hubot]: https://github.com/github/generator-hubot
