@@ -3,12 +3,9 @@
 ![alt text](https://github.com/ith-harvey/hubot-fastmail-cal/blob/master/imgs/dog2.png)
 
 
-doge is a chat bot built on the [Hubot][hubot] framework. The `@doge cal suggest` bot is a meeting query tool that finds availability in users schedules and responds with suggested meeting times. It is designed to work with the fast-mail API ([www.fastmail.com](https://www.fastmail.com/)) which provides a busy calendar URL.
+doge is a chat bot built on the [Hubot][hubot] framework and houses several utility bots, they are as follows:
 
-This README is intended to help get you started.
-
-[hubot]: http://hubot.github.com
-[generator-hubot]: https://github.com/github/generator-hubot
+* The `@doge cal suggest` bot is a meeting query tool that finds availability in users schedules and responds with suggested meeting times. It is designed to work with the fast-mail API ([www.fastmail.com](https://www.fastmail.com/)) which provides a busy calendar URL.
 
 ### Configuration for DEV environment
 You can test your hubot by running the following, however some plugins will not
@@ -165,3 +162,7 @@ Add the subdomain hubot should connect to. If you web URL looks like
 
 You may want to get comfortable with `heroku logs` and `heroku restart` if
 you're having issues.
+
+## More information on Hubot:
+[hubot]: http://hubot.github.com
+[generator-hubot]: https://github.com/github/generator-hubot
