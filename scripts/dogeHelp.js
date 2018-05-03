@@ -1,4 +1,4 @@
-const compose = (...fns) => fns.reduce((f, g) => (...args) => f(g(...args)))
+const Util = require('./utils.js')
 
 const Helptxt = {
 
@@ -7,14 +7,9 @@ const Helptxt = {
   basic: () => 'I\'m here to help! \n \n To get more specific information regarding which feature of the `@doge` bot you are having trouble with please run one of the following commands: \n \n`@doge help cal` : help with the calendar bot \n \n if you are still having trouble send a DM to the creator `@iant` \n \n additionally here are some commands that come baked in: \n \n'
 
 }
-
-const split = sep => str => str.split(sep);
-const spaceSplit = split(' ')
 const purifyArray = array => array.slice()
 
-const remove = item => array => array.slice((array.indexOf(item) + 1), array.length)
-
-const removeDoge = remove('@doge')
+const removeDoge = Util.remove('@doge')
 const parseCommand = cmdArray => {
   if ((cmdArray[0] === 'help') && (cmdArray.length === 1)) {
     return Helptxt.basic()
@@ -25,10 +20,7 @@ const parseCommand = cmdArray => {
   }
 }
 
-const helpResponse = compose(parseCommand, removeDoge, spaceSplit)
-
-
-
+const helpResponse = Util.compose(Util.parseCommand, removeDoge, Util.spaceSplit)
 
 module.exports = (robot) => {
 
