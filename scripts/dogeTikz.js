@@ -23,12 +23,6 @@ ${data}
 
 const cleanAndCreateFile = compose(createFile, addBoilerPlate, parseRemoveDoge)
 
-const promiseCompose = f => g => g.then(result => {
-  return f.then(result => {
-    return result
-  })
-})
-
 const execPromise = cmd => new Promise( (resolve, reject) => {
   exec(cmd, function(err, stdout) {
     if (err) return reject(err);
@@ -52,6 +46,7 @@ module.exports = (robot) => {
   robot.respond(/(.*)/i, function (msg) {
     if (awaitingTikzCode && (msg.message.text.split(' ')[1] !== 'tikz')) {
       msg.reply('processing...')
+
       cleanAndCreateFile(msg.message.text)
 
       laTexToPDF()
@@ -68,12 +63,13 @@ module.exports = (robot) => {
 
         rp(options).then(response => {
           msg.reply(`Here is your tikZ rendering: ${response.data.link}`)
-        }).catch(error => {
-          console.log('// request err //', error);
-          msg.reply(error)
         })
-        awaitingTikzCode = false
+      }).catch(error => {
+        console.log('// request err //', error);
+        msg.reply(error)
       })
+
+      awaitingTikzCode = false
     }
   })
 }
