@@ -30,6 +30,19 @@ const execPromise = cmd => new Promise( (resolve, reject) => {
   });
 });
 
+const buildPost = imgInBase64 => {
+  return {
+    method: 'POST',
+    uri: 'https://api.imgur.com/3/image',
+    headers: {'Authorization': process.env.IMGUR_CLIENT_ID},
+    body: { image: imgInBase64, type: 'base64'},
+    json: true
+  }
+}
+
+const HTTPrequest = options => rp(options)
+
+
 const laTexToPDF = () => execPromise('pdflatex laTexFile.tex')
 const pdfToJPG = () => execPromise('convert -density 300 laTexFile.pdf laTexFile.jpg')
 const jpgToBase64 = () => execPromise('openssl base64 -in laTexFile.jpg')
@@ -52,19 +65,9 @@ module.exports = (robot) => {
       laTexToPDF()
       .then(pdfToJPG)
       .then(jpgToBase64)
-      .then(imgInBase64 => {
-        const options = {
-          method: 'POST',
-          uri: 'https://api.imgur.com/3/image',
-          headers: {'Authorization': process.env.IMGUR_CLIENT_ID},
-          body: { image: imgInBase64, type: 'base64'},
-          json: true
-        }
-
-        rp(options).then(response => {
-          msg.reply(`Here is your tikZ rendering: ${response.data.link}`)
-        })
-      }).catch(error => {
+      .then(imgInBase64 => compose(HTTPrequest, buildPost)(imgInBase64))
+      .then(response => msg.reply(`Here is your tikZ rendering: ${response.data.link}`))
+      .catch(error => {
         console.log('// request err //', error);
         msg.reply(error)
       })
