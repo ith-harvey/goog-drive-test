@@ -23,6 +23,11 @@ ${data}
 
 const cleanAndCreateFile = compose(createFile, addBoilerPlate, parseRemoveDoge)
 
+const promiseCompose = f => g => g.then(result => {
+  return f.then(result => {
+    return result
+  })
+})
 
 const execPromise = cmd => new Promise( (resolve, reject) => {
   exec(cmd, function(err, stdout) {
@@ -30,6 +35,10 @@ const execPromise = cmd => new Promise( (resolve, reject) => {
     return resolve(stdout);
   });
 });
+
+const laTexToPDF = () => execPromise('pdflatex laTexFile.tex')
+const pdfToJPG = () => execPromise('convert -density 300 laTexFile.pdf laTexFile.jpg')
+const jpgToBase64 = () => execPromise('openssl base64 -in laTexFile.jpg')
 
 module.exports = (robot) => {
 
@@ -45,73 +54,26 @@ module.exports = (robot) => {
       msg.reply('processing...')
       cleanAndCreateFile(msg.message.text)
 
-      let execCommands = ['pdflatex laTexFile.tex', 'convert -density 300 laTexFile.pdf laTexFile.jpg', 'openssl base64 -in laTexFile.jpg']
+      laTexToPDF()
+      .then(pdfToJPG)
+      .then(jpgToBase64)
+      .then(imgInBase64 => {
+        const options = {
+          method: 'POST',
+          uri: 'https://api.imgur.com/3/image',
+          headers: {'Authorization': process.env.IMGUR_CLIENT_ID},
+          body: { image: imgInBase64, type: 'base64'},
+          json: true
+        }
 
-      const execCommandProm = execCommands.map( cmd => execPromise(cmd))
-
-      Promise.all(execCommandProm).then(res => {
-        console.log('here is the res', res);
-
-      //   const options = {
-      //     method: 'POST',
-      //     uri: 'https://api.imgur.com/3/image',
-      //     headers: {'Authorization': process.env.IMGUR_CLIENT_ID},
-      //     body: { image: res, type: 'base64'},
-      //     json: true
-      //   }
-      //
-      //   rp(options).then(resp => {
-      //     msg.reply(`Here is your tikZ rendering: ${resp.data.link}`)
-      //   }).catch(error => {
-      //     console.log('// request err //', error);
-      //     msg.reply(error)
-      //   })
-      //
-      //   awaitingTikzCode = false
-      //
-      // }).catch(error => {
-      //   console.log('// cmd err //', error);
-      //   msg.reply(error)
-      // })
-
-      // execPromise('pdflatex laTexFile.tex').then(res => {
-      //   console.log('pdf to latex', res);
-      //
-      //   execPromise('convert -density 300 laTexFile.pdf laTexFile.jpg').then( res => {
-      //     console.log('laTex trans to jpg', res);
-      //
-      //     execPromise('openssl base64 -in laTexFile.jpg').then(res => {
-      //       console.log('base64 trans response', res);
-      //
-      //       const options = {
-      //         method: 'POST',
-      //         uri: 'https://api.imgur.com/3/image',
-      //         headers: {'Authorization': process.env.IMGUR_CLIENT_ID},
-      //         body: {
-      //           image: res,
-      //           type: 'base64'
-      //         },
-      //         json: true
-      //       }
-      //
-      //       rp(options).then( resp => {
-      //         msg.reply(`Here is your tikZ rendering: ${resp.data.link}`)
-      //
-      //       })
-      //     })
-      //   })
-      // }).catch(error => {
-      //   console.log('error', error);
-      //   msg.reply(err)
-      // })
-
-
-
-    // }
-  }).catch(error => {
-    console.log('// cmd err //', error);
-    msg.reply(error)
+        rp(options).then(response => {
+          msg.reply(`Here is your tikZ rendering: ${response.data.link}`)
+        }).catch(error => {
+          console.log('// request err //', error);
+          msg.reply(error)
+        })
+        awaitingTikzCode = false
+      })
+    }
   })
-}
-})
 }
