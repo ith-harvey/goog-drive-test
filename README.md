@@ -18,7 +18,7 @@ Environment variables to be set in the root folder:
 * export RESPOND_TO_DM=true
 * export ROCKETCHAT_USER=doge
 * export ROCKETCHAT_PASSWORD=doge
-* export ROCKETCHAT_URL=159.65.101.16:3000
+* export ROCKETCHAT_URL= <URL HERE>
 * export NODE_VERSION=default
 
 (To learn more about environment variables and how they effect Hubot look at the Rocket.Chat Hubot github: https://github.com/RocketChat/hubot-rocketchat)
