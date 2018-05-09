@@ -71,7 +71,7 @@ module.exports = (robot) => {
       .then(response => msg.reply(`Here is your tikZ rendering: ${response.data.link}`))
       .catch(error => {
         console.log('// err //', error);
-        msg.reply('There seems to be an error with the provided tikz-cd code or how it was processed:\n' + error + '\n in the event you have already tested this tikz-cd on your own and the was working, please notify the bot creator @iant')
+        msg.reply('There seems to be an error with the provided tikz-cd code or how it was processed:\n \n' + error + '\n \n in the event you have already tested this tikz-cd on your own and the was working, please notify the bot creator @iant')
       })
 
       awaitingTikzCode = false
