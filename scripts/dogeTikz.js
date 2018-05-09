@@ -64,6 +64,8 @@ module.exports = (robot) => {
 
       cleanAndCreateFile(msg.message.text)
 
+      console.log('this is our env!', process.env.IMGUR_CLIENT_ID);
+
       laTexToPDF()
       .then(pdfToJPG)
       .then(jpgToBase64)
