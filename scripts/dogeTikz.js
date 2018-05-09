@@ -8,8 +8,11 @@ const removeDoge = remove('doge')
 const parseRemoveDoge = compose(spaceJoin, removeDoge, spaceSplit)
 
 const createFileCb = err => {
-  if (err) throw err
-  console.log('file has been created!');
+  if (err) {
+    throw err
+    console.log('ERROR PEEPS', err);
+  }
+  console.log('file has been created! ->', err);
 }
 const createFile = data => fs.writeFile('laTexFile.tex', data, createFileCb)
 
@@ -23,13 +26,6 @@ ${data}
 
 const cleanAndCreateFile = compose(createFile, addBoilerPlate, parseRemoveDoge)
 
-const execPromise = cmd => new Promise( (resolve, reject) => {
-  exec(cmd, function(err, stdout) {
-    if (err) return reject(err);
-    return resolve(stdout);
-  });
-});
-
 const buildPost = imgInBase64 => {
   return {
     method: 'POST',
@@ -42,9 +38,15 @@ const buildPost = imgInBase64 => {
 
 const HTTPrequest = options => rp(options)
 
+const execPromise = cmd => new Promise( (resolve, reject) => {
+  exec(cmd, function(err, stdout) {
+    if (err) return reject(err)
+    return resolve(stdout);
+  });
+});
 
 const laTexToPDF = () => execPromise('pdflatex laTexFile.tex')
-const pdfToJPG = () => execPromise('convert -density 300 laTexFile.pdf laTexFile.jpg')
+const pdfToJPG = () => execPromise('convert -density 300 laTexFile.pdf -quality 90 laTexFile.jpg')
 const jpgToBase64 = () => execPromise('openssl base64 -in laTexFile.jpg')
 
 module.exports = (robot) => {
@@ -68,8 +70,8 @@ module.exports = (robot) => {
       .then(imgInBase64 => compose(HTTPrequest, buildPost)(imgInBase64))
       .then(response => msg.reply(`Here is your tikZ rendering: ${response.data.link}`))
       .catch(error => {
-        console.log('// request err //', error);
-        msg.reply(error)
+        console.log('// err //', error);
+        msg.reply('There seems to be an error with the provided tikz-cd code or how it was processed:\n' + error + '\n in the event you have already tested this tikz-cd on your own and the was working, please notify the bot creator @iant')
       })
 
       awaitingTikzCode = false
