@@ -58,14 +58,10 @@ module.exports = (robot) => {
     awaitingTikzCode = true
   })
 
-  robot.respond(/(.*)/i, function (msg) {
+  robot.hear(/(.*)/i, function (msg) {
     if (awaitingTikzCode && (msg.message.text.split(' ')[1] !== 'tikz')) {
       msg.reply('processing...')
-
       cleanAndCreateFile(msg.message.text)
-
-      console.log('this is our env!', process.env.IMGUR_CLIENT_ID);
-
       laTexToPDF()
       .then(pdfToJPG)
       .then(jpgToBase64)
