@@ -1,16 +1,15 @@
 require('dotenv').config()
 const rp = require('request-promise');
 const fs = require('fs');
-const {compose, spaceJoin, spaceSplit, remove, newLineSplit} = require('./utils.js')
 const {exec} = require('child_process')
+
+const {compose, spaceJoin, spaceSplit, remove, newLineSplit} = require('./utils.js')
 
 const removeDoge = remove('doge')
 const removeDirectLine = remove('@doge tikz direct')
 
 const parseRemoveDoge = compose(spaceJoin, removeDoge, spaceSplit)
 const parseRemoveDirect = compose(spaceJoin, removeDirectLine, newLineSplit)
-
-// const parseRemoveDirect = compose(spaceJoin, removeDirect, spaceSplit)
 
 const createFileCb = err => {
   if (err) {
@@ -23,6 +22,7 @@ const createFile = data => fs.writeFile('laTexFile.tex', data, createFileCb)
 
 const addBoilerPlate = data => `\\documentclass{standalone}
 \\usepackage{tikz-cd}
+\\usepackage{amsmath, amsthm, amssymb, amsfonts}
 \\begin{document}
 \\begin{tikzcd}
 ${data}
@@ -44,7 +44,7 @@ const buildPost = imgInBase64 => {
 const HTTPrequest = options => rp(options)
 
 const execPromise = cmd => new Promise( (resolve, reject) => {
-  exec(cmd, function(err, stdout) {
+  exec(cmd, function(err, stdout, stderr) {
     if (err) return reject(err)
     return resolve(stdout);
   });
@@ -62,7 +62,7 @@ const laTexCreationFlow = (msg) => {
   })
 }
 
-const laTexToPDF = () => execPromise('pdflatex laTexFile.tex')
+const laTexToPDF = () => execPromise('pdflatex -halt-on-error laTexFile.tex')
 const pdfToJPG = () => execPromise('convert -density 300 laTexFile.pdf -quality 90 laTexFile.jpg')
 const jpgToBase64 = () => execPromise('openssl base64 -in laTexFile.jpg')
 
@@ -72,16 +72,14 @@ module.exports = (robot) => {
 
   robot.respond(/(tikz direct)/i, function (msg) {
     msg.reply('processing tikz...')
-    console.log('post remove:', parseRemoveDirect(msg.message.text));
 
     addBoilerAndCreateFile(parseRemoveDirect(msg.message.text))
 
     laTexCreationFlow(msg)
-
   })
 
   robot.respond(/(tikz create)/i, function (msg) {
-    msg.reply('Hi there, just so you know I write all the boilerplate for you: ``` \\documentclass{standalone} \n \\usepackage{tikz-cd} \n \\begin{document} \n \\begin{tikzcd} \n\n //* your code here *// \n\n \\end{tikzcd} \n \\end{document}```\n Please provide me the tikZ code you would like to run:')
+    msg.reply('Hi there, just so you know I write all the boilerplate for you: ``` \\documentclass{standalone} \n \\usepackage{tikz-cd} \n \\usepackage{amsmath, amsthm, amssymb, amsfonts} \n \\begin{document} \n \\begin{tikzcd} \n\n //* your code here *// \n\n \\end{tikzcd} \n \\end{document}```\n Please provide me the tikZ code you would like to run:')
     awaitingTikzCode = true
   })
 
