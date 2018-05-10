@@ -1,11 +1,16 @@
 require('dotenv').config()
 const rp = require('request-promise');
 const fs = require('fs');
-const {compose, spaceJoin, spaceSplit, remove} = require('./utils.js')
+const {compose, spaceJoin, spaceSplit, remove, newLineSplit} = require('./utils.js')
 const {exec} = require('child_process')
 
 const removeDoge = remove('doge')
+const removeDirectLine = remove('@doge tikz direct')
+
 const parseRemoveDoge = compose(spaceJoin, removeDoge, spaceSplit)
+const parseRemoveDirect = compose(spaceJoin, removeDirectLine, newLineSplit)
+
+// const parseRemoveDirect = compose(spaceJoin, removeDirect, spaceSplit)
 
 const createFileCb = err => {
   if (err) {
@@ -24,7 +29,7 @@ ${data}
 \\end{tikzcd}
 \\end{document}`
 
-const cleanAndCreateFile = compose(createFile, addBoilerPlate, parseRemoveDoge)
+const addBoilerAndCreateFile = compose(createFile, addBoilerPlate)
 
 const buildPost = imgInBase64 => {
   return {
@@ -53,6 +58,23 @@ module.exports = (robot) => {
 
   let awaitingTikzCode = false
 
+  robot.respond(/(tikz direct)/i, function (msg) {
+    msg.reply('processing tikz...')
+    console.log('post remove:', parseRemoveDirect(msg.message.text));
+
+    addBoilerAndCreateFile(parseRemoveDirect(msg.message.text))
+
+    laTexToPDF()
+    .then(pdfToJPG)
+    .then(jpgToBase64)
+    .then(imgInBase64 => compose(HTTPrequest, buildPost)(imgInBase64))
+    .then(response => msg.reply(`Here is your tikz rendering: ${response.data.link}`))
+    .catch(error => {
+      console.log('// err //', error);
+      msg.reply('There seems to be an error with the provided tikz-cd code or how it was processed:\n \n' + error + '\n \n in the event you have already tested this tikz-cd on your own and the was working, please notify the bot creator @iant')
+    })
+  })
+
   robot.respond(/(tikz create)/i, function (msg) {
     msg.reply('Hi there, just so you know I write all the boilerplate for you: ``` \\documentclass{standalone} \n \\usepackage{tikz-cd} \n \\begin{document} \n \\begin{tikzcd} \n\n //* your code here *// \n\n \\end{tikzcd} \n \\end{document}```\n Please provide me the tikZ code you would like to run:')
     awaitingTikzCode = true
@@ -60,13 +82,15 @@ module.exports = (robot) => {
 
   robot.hear(/(.*)/i, function (msg) {
     if (awaitingTikzCode && (msg.message.text.split(' ')[1] !== 'tikz')) {
-      msg.reply('processing...')
-      cleanAndCreateFile(msg.message.text)
+      msg.reply('processing tikz...')
+
+      addBoilerAndCreateFile(parseRemoveDoge(msg.message.text))
+
       laTexToPDF()
       .then(pdfToJPG)
       .then(jpgToBase64)
       .then(imgInBase64 => compose(HTTPrequest, buildPost)(imgInBase64))
-      .then(response => msg.reply(`Here is your tikZ rendering: ${response.data.link}`))
+      .then(response => msg.reply(`Here is your tikz rendering: ${response.data.link}`))
       .catch(error => {
         console.log('// err //', error);
         msg.reply('There seems to be an error with the provided tikz-cd code or how it was processed:\n \n' + error + '\n \n in the event you have already tested this tikz-cd on your own and the was working, please notify the bot creator @iant')

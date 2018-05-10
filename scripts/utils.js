@@ -6,6 +6,8 @@ const split = sep => str => str.split(sep);
 
 const spaceSplit = split(' ')
 
+const newLineSplit = split('\n')
+
 const join = sep => array => array.join(sep)
 
 const spaceJoin = join(' ')
@@ -16,5 +18,6 @@ module.exports = {
   compose,
   split,
   spaceSplit,
-  spaceJoin
+  spaceJoin,
+  newLineSplit
 }
