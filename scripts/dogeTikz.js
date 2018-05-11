@@ -55,10 +55,10 @@ const laTexCreationFlow = (msg) => {
   .then(pdfToJPG)
   .then(jpgToBase64)
   .then(imgInBase64 => compose(HTTPrequest, buildPost)(imgInBase64))
-  .then(response => msg.reply(`Here is your tikz rendering: ${response.data.link}`))
+  .then(response => msg.reply(response.data.link))
   .catch(error => {
     console.log('// err //', error);
-    msg.reply('There seems to be an error with the provided tikz-cd code or how it was processed:\n \n' + error + '\n \n in the event you have already tested this tikz-cd on your own and the was working, please notify the bot creator @iant')
+    msg.reply('There seems to be an error with the provided tikz-cd code or how it was processed:\n \n' + error + '\n \n in the event you have already tested this tikz-cd code on your own and the was working, please notify the bot creator @iant')
   })
 }
 
@@ -71,7 +71,6 @@ module.exports = (robot) => {
   let awaitingTikzCode = false
 
   robot.respond(/(tikz direct)/i, function (msg) {
-    msg.reply('processing tikz...')
 
     addBoilerAndCreateFile(parseRemoveDirect(msg.message.text))
 
