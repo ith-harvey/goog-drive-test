@@ -3,7 +3,8 @@ const rp = require('request-promise');
 const fs = require('fs');
 const {exec} = require('child_process')
 
-const {compose, spaceJoin, spaceSplit, remove, newLineSplit} = require('./utils.js')
+const { FU } = require('./utils')
+const {compose, spaceJoin, spaceSplit, remove, newLineSplit} = FU
 
 const removeDoge = remove('doge')
 const removeDirectLine = remove('@doge tikz direct')
@@ -18,6 +19,7 @@ const createFileCb = err => {
   }
   console.log('file has been created! ->', err);
 }
+
 const createFile = data => fs.writeFile('laTexFile.tex', data, createFileCb)
 
 const addBoilerPlate = data => `\\documentclass{standalone}

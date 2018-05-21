@@ -1,4 +1,6 @@
-const {spaceSplit, newLineSplit} = require('./utils.js')
+
+const { FU } = require('./utils')
+const {spaceSplit, newLineSplit} = FU
 
 module.exports = (robot) => {
 

@@ -1,5 +1,13 @@
 
-const {spaceSplit, newLineSplit, purify, slice, spaceJoin} = require('./utils.js')
+const {FU, RBU} = require('./utils')
+
+const {fireSheetsPost} = require('./expenseLogic/APIResource.js')
+
+const {spaceSplit, prop, equalModifier, newLineSplit, modObjKickBack, purify, slice, compose, spaceJoin, checkIfDMOrPublic} = FU
+
+const {newUserCheckAndCreate} = RBU
+
+const Misc = require('./expenseLogic/misc.js')
 
 const oneArgSlice = slice(3)
 const lastChar = slice(-1)
@@ -15,30 +23,80 @@ const buildDescription = cmdArr => {
   description.push(newArr[i])
 
   return {description: spaceJoin(description),
-    catagories: newArr.slice(i + 1, newArr.length)}
+    catagory: newArr.slice(i + 1, newArr.length)}
 }
 
 module.exports = (robot) => {
 
+  let awaitingOffice = false
+  let awaitingTeam = false
+
+  robot.respond(/(expense setup)/i, (msg) => {
+    msg.reply('Hi, welcome to expense setup wizard. Please select which office you work for or are permenently based out of: \n \n *New York City* \n *Santa Cruz* \n *China* \n *Copenhagen* \n *Remote*')
+    awaitingOffice = true
+  })
+
+  robot.hear(/(New York City|Santa Cruz|China|Copenhagen|Remote)/i, (msg) => {
+    if (awaitingOffice) {
+      msg.message.text = checkIfDMOrPublic(msg.message.text)
+
+      newUserCheckAndCreate(robot, msg.message.user.id)
+
+      //addOffice and get back userObj
+      const addOffice = modObjKickBack('office', msg.message.text)
+
+      robot.brain.set(msg.message.user.id, addOffice(robot.brain.get(msg.message.user.id)))
+
+      msg.reply('Thank you, now please respond with which team (provided in bold) you are apart of: \n \n *Executive* \n *Marketing* \n *Oasis* \n *Market Making* \n *Legal* \n *Code Development* -> (dapphub, etc) \n *Integrations* \n *Business Dev* \n *Other*')
+
+      awaitingOffice = false
+      awaitingTeam = true
+    }
+  })
+
+  robot.hear(/(Executive|Marketing|Oasis|Market Making|Legal|Code Development|Integrations|Business Dev|Other)/i, (msg) => {
+    if (awaitingTeam) {
+      msg.message.text = checkIfDMOrPublic(msg.message.text)
+
+      //addTeam and get back userObj
+      const addTeam = modObjKickBack('team', msg.message.text)
+
+      robot.brain.set(msg.message.user.id, addTeam(robot.brain.get(msg.message.user.id)))
+
+      msg.reply('Thank you for using the setup wizard, you can now enter expenses with the command `@doge expense create`')
+      awaitingTeam = false
+    }
+  })
+
   robot.respond(/(expense create)/i, (msg) => {
-    msg.reply('Hi, welcome to expense creator. I accept the following format for expenses: \n \n `<date(DD/MM/YYYY)> <amount(in USD)> <"description of purchase"> <categories(seperated by comma)>`\n \n here is an example: \n `10/28/2018 130.20 "Such wow dog treats...for a client of course!" food`')
+    if (Misc.checkIfUserIsSetup(robot, msg.message.user.id)) {
+      return msg.reply('To use the `@doge expense create` feature you must first go through the setup wizard. Do so by typing the command `@doge expense setup`.')
+    }
+
+    msg.reply('Hi, welcome to expense creator. I accept the following format for expenses: \n \n `<date(DD/MM/YYYY)> <amount(in USD)> <"description of purchase"> <category>`\n \n Expense catagories (only apply one catagory to one expense): \n *Accomodation* \n *Flight* \n *Train* \n *Lyft* \n *Uber* \n *Taxi* \n *Breakfast* \n *Lunch* \n *Dinner* \n *Drinks* \n *Conference Sponsorship* \n *Conference Tickets* \n *Parking* \n *Gym Membership* \n *Bug Bounties* \n *Rent* \n *Maker Clothing* \n *Other* \n \n Example: \n `10/28/2018 130.20 "Such wow dog treats...for a client of course!" lunch`')
   })
 
   robot.hear(/([0-9][0-9]\/[0-9][0-9]\/[0-9][0-9][0-9][0-9])/i, function (msg){
-    const {description, catagories} =  buildDescription(spaceSplit(msg.message.text))
+
+    //destructure and grab description, catagory, office and team
+    const {description, catagory} =  buildDescription(spaceSplit(msg.message.text))
+
+    console.log('err?', robot.brain.get(msg.message.user.id));
+
+    const {office, team} = robot.brain.get(msg.message.user.id)
 
     const expenseObj = {
+      office, team, description, catagory,
       date: spaceSplit(msg.message.text)[1],
-      amount: `$${spaceSplit(msg.message.text)[2]}`,
-      description: description,
-      catagories: catagories,
+      amount: `$${spaceSplit(msg.message.text)[2]}`
     }
 
-    msg.reply(`Here is your expense: \n \n *date:* ${expenseObj.date} \n *amount:* ${expenseObj.amount} \n *description:* ${expenseObj.description} \n *catagories:* ${expenseObj.catagories} \n \n If the above looks correct respond by typing \`submit\``)
+    msg.reply(`Here is your expense: \n \n *office:* ${expenseObj.office} \n *team:* ${expenseObj.team} \n *date:* ${expenseObj.date} \n *amount:* ${expenseObj.amount} \n *description:* ${expenseObj.description} \n *catagory:* ${expenseObj.catagory} \n \n If the above looks correct respond by typing \`submit\``)
   })
 
   robot.hear(/(submit)/i, function (msg) {
     console.log('running post request!');
+    fireSheetsPost()
   })
 
 
