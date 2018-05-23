@@ -2,13 +2,36 @@ const fs = require('fs')
 const readline = require('readline')
 const {google} = require('googleapis')
 
-function fireSheetsPost() {
-  console.log('here', process.cwd())
+const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
+const TOKEN_PATH = 'credentials.json';
 
-  fs.readFile('/scripts/expenseLogic/client_secret.json', (err, content) => {
+// need function that checks if auth is fresh
+// if not fresh it runs the process and gets fresh authtoken
+function postExpense(auth, expenseObj) {
+
+  const sheets = google.sheets({version: 'v4', auth})
+  sheets.spreadsheets.values.append({
+    spreadsheetId: '11tC3V-TV3VLinv3P9bWaeNHxy4wR4H10PtHROfcFwi4',
+    range: 'Sheet1!C4:I',
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    resource: {
+      values: [[expenseObj.date, expenseObj.name, expenseObj.office, expenseObj.team, expenseObj.catagory, expenseObj.description, expenseObj.amount]]
+    }
+    }, (err, response) => {
+    if (err) {
+      console.error('sheets error ->', err);
+      return
+    }
+    console.log('successfully posted to sheets!');
+  });
+}
+
+function authAndPostExpense(expenseObj) {
+  fs.readFile('/Users/ianharvey/Documents/Programing/post-galvanize-projects/client-projects/dapphubb/doge-bot/client_secret.json', (err, content) => {
     if (err) return console.log('Error loading client secret file:', err)
     // Authorize a client with credentials, then call the Google Sheets API.
-    authorize(JSON.parse(content), listMajors)
+    authorize(JSON.parse(content), postExpense, expenseObj)
   })
 }
 
@@ -18,16 +41,17 @@ function fireSheetsPost() {
  * @param {Object} credentials The authorization client credentials.
  * @param {function} callback The callback to call with the authorized client.
  */
-function authorize(credentials, callback) {
+function authorize(credentials, callback, expenseObj) {
   const {client_secret, client_id, redirect_uris} = credentials.installed
   const oAuth2Client = new google.auth.OAuth2(
       client_id, client_secret, redirect_uris[0])
 
   // Check if we have previously stored a token.
   fs.readFile(TOKEN_PATH, (err, token) => {
-    if (err) return getNewToken(oAuth2Client, callback)
+    if (err) return getNewToken(oAuth2Client, callback, expenseObj)
     oAuth2Client.setCredentials(JSON.parse(token))
-    callback(oAuth2Client)
+
+    callback(oAuth2Client, expenseObj)
   })
 }
 
@@ -37,7 +61,7 @@ function authorize(credentials, callback) {
  * @param {google.auth.OAuth2} oAuth2Client The OAuth2 client to get token for.
  * @param {getEventsCallback} callback The callback for the authorized client.
  */
-function getNewToken(oAuth2Client, callback) {
+function getNewToken(oAuth2Client, callback, expenseObj) {
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: SCOPES,
@@ -57,33 +81,14 @@ function getNewToken(oAuth2Client, callback) {
         if (err) console.error(err)
         console.log('Token stored to', TOKEN_PATH)
       })
-      callback(oAuth2Client)
+      callback(oAuth2Client, expenseObj)
     })
   })
 }
 
-function listMajors(auth) {
-  const sheets = google.sheets({version: 'v4', auth})
-  sheets.spreadsheets.values.append({
-    spreadsheetId: '11tC3V-TV3VLinv3P9bWaeNHxy4wR4H10PtHROfcFwi4',
-    range: 'Class Data!A2:E',
-    valueInputOption: 'the',
-    insertDataOption: 'the'
-  }, (err, {data}) => {
-    if (err) return console.log('The API returned an error: ' + err)
-    const rows = data.values
-    if (rows.length) {
-      console.log('Name, Major:')
-      // Print columns A and E, which correspond to indices 0 and 4.
-      rows.map((row) => {
-        console.log(`${row[0]}, ${row[4]}`)
-      })
-    } else {
-      console.log('No data found.')
-    }
-  })
-}
+
+
 
 module.exports = {
-  fireSheetsPost
+  authAndPostExpense
 }

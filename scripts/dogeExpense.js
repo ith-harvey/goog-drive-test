@@ -1,7 +1,7 @@
 
 const {FU, RBU} = require('./utils')
 
-const {fireSheetsPost} = require('./expenseLogic/APIResource.js')
+const {authAndPostExpense} = require('./expenseLogic/APIResource.js')
 
 const {spaceSplit, prop, equalModifier, newLineSplit, modObjKickBack, purify, slice, compose, spaceJoin, checkIfDMOrPublic} = FU
 
@@ -23,11 +23,11 @@ const buildDescription = cmdArr => {
   description.push(newArr[i])
 
   return {description: spaceJoin(description),
-    catagory: newArr.slice(i + 1, newArr.length)}
+    catagory: newArr.slice(i + 1, newArr.length)[0]}
 }
 
 module.exports = (robot) => {
-
+  let expenseObj = {}
   let awaitingOffice = false
   let awaitingTeam = false
 
@@ -81,22 +81,24 @@ module.exports = (robot) => {
     //destructure and grab description, catagory, office and team
     const {description, catagory} =  buildDescription(spaceSplit(msg.message.text))
 
-    console.log('err?', robot.brain.get(msg.message.user.id));
-
     const {office, team} = robot.brain.get(msg.message.user.id)
 
-    const expenseObj = {
+    expenseObj = {
       office, team, description, catagory,
+      name: msg.message.user.name,
       date: spaceSplit(msg.message.text)[1],
       amount: `$${spaceSplit(msg.message.text)[2]}`
     }
 
     msg.reply(`Here is your expense: \n \n *office:* ${expenseObj.office} \n *team:* ${expenseObj.team} \n *date:* ${expenseObj.date} \n *amount:* ${expenseObj.amount} \n *description:* ${expenseObj.description} \n *catagory:* ${expenseObj.catagory} \n \n If the above looks correct respond by typing \`submit\``)
+    awaitingSubmit = true
   })
 
   robot.hear(/(submit)/i, function (msg) {
-    console.log('running post request!');
-    fireSheetsPost()
+    if (awaitingSubmit) {
+      authAndPostExpense(expenseObj)
+      awaitingSubmit = false
+    }
   })
 
 
