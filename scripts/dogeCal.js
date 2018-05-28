@@ -16,6 +16,8 @@ const Merge = require('./calLogic/MergeAvail.js')
 const Misc = require('./calLogic/Misc.js')
 
 const { FU } = require('./utils')
+
+//Functional Utilities
 const { checkIfDMOrPublic } = FU
 
 module.exports = (robot) => {

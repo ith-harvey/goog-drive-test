@@ -7,8 +7,7 @@ const TOKEN_PATH = 'credentials.json';
 
 // need function that checks if auth is fresh
 // if not fresh it runs the process and gets fresh authtoken
-function postExpense(auth, expenseObj) {
-
+function postExpense(auth, expenseObj, msg) {
   const sheets = google.sheets({version: 'v4', auth})
   sheets.spreadsheets.values.append({
     spreadsheetId: '11tC3V-TV3VLinv3P9bWaeNHxy4wR4H10PtHROfcFwi4',
@@ -21,17 +20,19 @@ function postExpense(auth, expenseObj) {
     }, (err, response) => {
     if (err) {
       console.error('sheets error ->', err);
-      return
+      msg.reply(`error posting to google sheet: ${err}`)
     }
+
     console.log('successfully posted to sheets!');
+    msg.reply(':ballot_box_with_check: successfully sent expense to master google sheet')
   });
 }
 
-function authAndPostExpense(expenseObj) {
+function authAndPostExpense(expenseObj, msg) {
   fs.readFile('/Users/ianharvey/Documents/Programing/post-galvanize-projects/client-projects/dapphubb/doge-bot/client_secret.json', (err, content) => {
     if (err) return console.log('Error loading client secret file:', err)
     // Authorize a client with credentials, then call the Google Sheets API.
-    authorize(JSON.parse(content), postExpense, expenseObj)
+    authorize(JSON.parse(content), postExpense, expenseObj, msg)
   })
 }
 
@@ -41,17 +42,17 @@ function authAndPostExpense(expenseObj) {
  * @param {Object} credentials The authorization client credentials.
  * @param {function} callback The callback to call with the authorized client.
  */
-function authorize(credentials, callback, expenseObj) {
+function authorize(credentials, callback, expenseObj, msg) {
   const {client_secret, client_id, redirect_uris} = credentials.installed
   const oAuth2Client = new google.auth.OAuth2(
       client_id, client_secret, redirect_uris[0])
 
   // Check if we have previously stored a token.
   fs.readFile(TOKEN_PATH, (err, token) => {
-    if (err) return getNewToken(oAuth2Client, callback, expenseObj)
+    if (err) return getNewToken(oAuth2Client, callback, expenseObj, msg)
     oAuth2Client.setCredentials(JSON.parse(token))
 
-    callback(oAuth2Client, expenseObj)
+    callback(oAuth2Client, expenseObj, msg)
   })
 }
 
@@ -61,7 +62,7 @@ function authorize(credentials, callback, expenseObj) {
  * @param {google.auth.OAuth2} oAuth2Client The OAuth2 client to get token for.
  * @param {getEventsCallback} callback The callback for the authorized client.
  */
-function getNewToken(oAuth2Client, callback, expenseObj) {
+function getNewToken(oAuth2Client, callback, expenseObj, msg) {
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: SCOPES,
@@ -81,7 +82,7 @@ function getNewToken(oAuth2Client, callback, expenseObj) {
         if (err) console.error(err)
         console.log('Token stored to', TOKEN_PATH)
       })
-      callback(oAuth2Client, expenseObj)
+      callback(oAuth2Client, expenseObj, msg)
     })
   })
 }

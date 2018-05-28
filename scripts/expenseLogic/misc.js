@@ -7,15 +7,15 @@ function checkIfUserIsSetup(robot, userId) {
     return true
 
   } else if (robot.brain.get(userId).team === undefined) {
-    //user has not provided a URL.
+    //user has not provided a team.
     return true
 
   } else if (robot.brain.get(userId).office === undefined) {
-    //user has not provided working hours.
+    //user has not provided office.
     return true
   }
 
-  return false // user is already setup for cal suggest feature
+  return false // user is already setup for expensing
 }
 
 module.exports = {

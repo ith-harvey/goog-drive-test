@@ -3,11 +3,15 @@ const {FU, RBU} = require('./utils')
 
 const {authAndPostExpense} = require('./expenseLogic/APIResource.js')
 
+// functional Utilities
 const {spaceSplit, prop, equalModifier, newLineSplit, modObjKickBack, purify, slice, compose, spaceJoin, checkIfDMOrPublic} = FU
 
+// Robot Brain Utilities
 const {newUserCheckAndCreate} = RBU
 
 const Misc = require('./expenseLogic/misc.js')
+
+const { isExpenseValid } = require('./expenseLogic/validate.js')
 
 const oneArgSlice = slice(3)
 const lastChar = slice(-1)
@@ -87,7 +91,7 @@ module.exports = (robot) => {
       office, team, description, catagory,
       name: msg.message.user.name,
       date: spaceSplit(msg.message.text)[1],
-      amount: `$${spaceSplit(msg.message.text)[2]}`
+      amount: `${spaceSplit(msg.message.text)[2]}`
     }
 
     msg.reply(`Here is your expense: \n \n *office:* ${expenseObj.office} \n *team:* ${expenseObj.team} \n *date:* ${expenseObj.date} \n *amount:* ${expenseObj.amount} \n *description:* ${expenseObj.description} \n *catagory:* ${expenseObj.catagory} \n \n If the above looks correct respond by typing \`submit\``)
@@ -95,8 +99,26 @@ module.exports = (robot) => {
   })
 
   robot.hear(/(submit)/i, function (msg) {
+
     if (awaitingSubmit) {
-      authAndPostExpense(expenseObj)
+      const {outcome, explain} = isExpenseValid(expenseObj)
+
+      if (outcome) {
+        msg.reply(`:ballot_box_with_check: ${explain}`)
+        authAndPostExpense(expenseObj, msg)
+        awaitingSubmit = false
+
+      } else if (!outcome) {
+
+        let validationErrors = ''
+        explain.forEach( valErr => {
+          validationErrors += `-${valErr} \n`
+        })
+        msg.reply(`Your expense was not valid in the following areas: \n ${validationErrors} \n please re attempt the expense by typing \`@doge expense create\` `)
+      }
+
+
+
       awaitingSubmit = false
     }
   })

@@ -1,6 +1,10 @@
 const compose = (...fns) => fns.reduce((f, g) => (...args) => f(g(...args)))
 
+const regTest = regexString => testText => regexString.test(testText)
+
 const remove = item => array => array.slice((array.indexOf(item) + 1), array.length)
+
+const indexOf = item => array => array.indexOf(item)
 
 const split = sep => str => str.split(sep);
 
@@ -28,13 +32,18 @@ const modObjKickBack = (prop, value) => object => {
   return newObj
 }
 
+const boolValTranslator = val => val ? true : false
+
 const checkIfDMOrPublic = (msg) => msg.split(' ')[1] ? msg.split(' ')[1] : msg.split(' ')[0] // if in DM the mssge has an added 'doge' string -> this gets rid of it
 
 module.exports = {
+  boolValTranslator,
+  indexOf,
   remove,
   compose,
   split,
   slice,
+  regTest,
   purify,
   modObjKickBack,
   prop,
