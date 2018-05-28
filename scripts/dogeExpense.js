@@ -11,7 +11,7 @@ const {newUserCheckAndCreate} = RBU
 
 const Misc = require('./expenseLogic/misc.js')
 
-const { isExpenseValid } = require('./expenseLogic/validate.js')
+const isExpenseValid = require('./expenseLogic/validate.js')
 
 const oneArgSlice = slice(3)
 const lastChar = slice(-1)
@@ -34,6 +34,8 @@ module.exports = (robot) => {
   let expenseObj = {}
   let awaitingOffice = false
   let awaitingTeam = false
+  let awaitingExpense = false
+  let awaitingSubmit = false
 
   robot.respond(/(expense setup)/i, (msg) => {
     msg.reply('Hi, welcome to expense setup wizard. Please select which office you work for or are permenently based out of: \n \n *New York City* \n *Santa Cruz* \n *China* \n *Copenhagen* \n *Remote*')
@@ -78,46 +80,62 @@ module.exports = (robot) => {
     }
 
     msg.reply('Hi, welcome to expense creator. I accept the following format for expenses: \n \n `<date(DD/MM/YYYY)> <amount(in USD)> <"description of purchase"> <category>`\n \n Expense catagories (only apply one catagory to one expense): \n *Accomodation* \n *Flight* \n *Train* \n *Lyft* \n *Uber* \n *Taxi* \n *Breakfast* \n *Lunch* \n *Dinner* \n *Drinks* \n *Conference Sponsorship* \n *Conference Tickets* \n *Parking* \n *Gym Membership* \n *Bug Bounties* \n *Rent* \n *Maker Clothing* \n *Other* \n \n Example: \n `10/28/2018 130.20 "Such wow dog treats...for a client of course!" lunch`')
+
+    awaitingExpense = true
   })
 
-  robot.hear(/([0-9][0-9]\/[0-9][0-9]\/[0-9][0-9][0-9][0-9])/i, function (msg){
+  robot.hear(/(.*)/i, function (msg) {
 
-    //destructure and grab description, catagory, office and team
-    const {description, catagory} =  buildDescription(spaceSplit(msg.message.text))
+    if (awaitingExpense) {
+      console.log('//// Running check!!... for some reason...');
 
-    const {office, team} = robot.brain.get(msg.message.user.id)
+      const {outcome, explain} = isExpenseValid.surfaceCheck(msg.message.text)
 
-    expenseObj = {
-      office, team, description, catagory,
-      name: msg.message.user.name,
-      date: spaceSplit(msg.message.text)[1],
-      amount: `${spaceSplit(msg.message.text)[2]}`
+      if (outcome) {
+        //destructure and grab description, catagory, office and team
+        const {description, catagory} =  buildDescription(spaceSplit(msg.message.text))
+
+        const {office, team} = robot.brain.get(msg.message.user.id)
+
+        expenseObj = {
+          office, team, description, catagory,
+          name: msg.message.user.name,
+          date: spaceSplit(msg.message.text)[1],
+          amount: spaceSplit(msg.message.text)[2]
+        }
+
+        msg.reply(`Here is your expense: \n \n *office:* ${expenseObj.office} \n *team:* ${expenseObj.team} \n *date:* ${expenseObj.date} \n *amount:* ${expenseObj.amount} \n *description:* ${expenseObj.description} \n *catagory:* ${expenseObj.catagory} \n \n If the above looks correct respond by typing \`submit\``)
+        awaitingSubmit = true
+
+      } else {
+        msg.reply(explain)
+        awaitingSubmit = false
+      }
+      awaitingExpense = false
+
     }
-
-    msg.reply(`Here is your expense: \n \n *office:* ${expenseObj.office} \n *team:* ${expenseObj.team} \n *date:* ${expenseObj.date} \n *amount:* ${expenseObj.amount} \n *description:* ${expenseObj.description} \n *catagory:* ${expenseObj.catagory} \n \n If the above looks correct respond by typing \`submit\``)
-    awaitingSubmit = true
   })
 
   robot.hear(/(submit)/i, function (msg) {
 
     if (awaitingSubmit) {
-      const {outcome, explain} = isExpenseValid(expenseObj)
+      const {outcome, explain} = isExpenseValid.deepCheck(expenseObj)
 
       if (outcome) {
         msg.reply(`:ballot_box_with_check: ${explain}`)
+
+        expenseObj.amount = `$${expenseObj.amount}`
+
         authAndPostExpense(expenseObj, msg)
-        awaitingSubmit = false
 
       } else if (!outcome) {
 
         let validationErrors = ''
         explain.forEach( valErr => {
-          validationErrors += `-${valErr} \n`
+          validationErrors += `:x:${valErr} \n`
         })
         msg.reply(`Your expense was not valid in the following areas: \n ${validationErrors} \n please re attempt the expense by typing \`@doge expense create\` `)
       }
-
-
 
       awaitingSubmit = false
     }
