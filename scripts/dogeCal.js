@@ -15,7 +15,10 @@ const Time = require('./calLogic/Time.js')
 const Merge = require('./calLogic/MergeAvail.js')
 const Misc = require('./calLogic/Misc.js')
 
-let checkIfDMOrPublic = (msg) => msg.split(' ')[1] ? msg.split(' ')[1] : msg.split(' ')[0] // if in DM the mssge has an added 'doge' string -> this gets rid of it
+const { FU } = require('./utils')
+
+//Functional Utilities
+const { checkIfDMOrPublic } = FU
 
 module.exports = (robot) => {
 
@@ -24,7 +27,7 @@ module.exports = (robot) => {
   let calSetupDone = false
 
   robot.respond(/(cal setup)/i, function (msg) {
-    msg.reply('Welcome to the cal setup wizard. \n \n Please enter your fastmail account’s free/busy calendar URL so I can share your availability upon request.\n\n (To access your free/busy calendar URL visit www.fastmail.com/calendar/ while logged in.\n Select the calendar dropdown > settings > calendars > Edit&share > check free/busy information > copy the url > hit save up top > paste URL in chat and hit enter)')
+    msg.reply('Welcome to the cal setup wizard. \n \n Please enter your fastmail account’s free/busy calendar URL so I can share your availability upon request.\n \n (To access your free/busy calendar URL visit www.fastmail.com/calendar/ while logged in.\n Select the calendar dropdown > settings > calendars > Edit&share > check free/busy information > copy the url > hit save up top > paste URL in chat and hit enter)')
     awaitingUrl = true
   })
 

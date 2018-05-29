@@ -2,4 +2,5 @@ node_modules
 .DS_Store*
 .hubot_history
 .env
-client_secret_524033337733-s0nnpn8954ca3h0i4ejnc1lrl07jtomg.apps.googleusercontent.com.json
+client_secret.json
+credentials.json
