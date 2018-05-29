@@ -1,6 +1,8 @@
 
 // Things to do:
 
+// 1. get rid of doge incoming in doge expense file!
+
 // 2. learn how to handle false / null values in FP (using a container??) so my compose funcions will run and when the error kicks it doesn't break shit
 
 const { FU } = require('../utils')
@@ -32,6 +34,7 @@ const date = (text, outcome) => /([0-9][0-9]\/[0-9][0-9]\/[0-9][0-9][0-9][0-9])/
 
 const surfaceCheck = (text) => {
 
+  console.log('in surf', text);
   // is the expense valid?
   return /^[0-9\/]+ [0-9\.]+ (")(.*)(") [a-zA-Z_ ]*$/i.test(text) ?
   {outcome: true, explain: 'expense is in correct format'} : // valid

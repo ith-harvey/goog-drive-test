@@ -1,10 +1,14 @@
 
+
 const {FU, RBU} = require('./utils')
 
 const {authAndPostExpense} = require('./expenseLogic/APIResource.js')
 
 // functional Utilities
-const {spaceSplit, prop, equalModifier, newLineSplit, modObjKickBack, purify, slice, compose, spaceJoin, checkIfDMOrPublic} = FU
+const {spaceSplit, prop, equalModifier, newLineSplit, modObjKickBack, purify, slice, compose, spaceJoin, checkIfDMOrPublicm, remove} = FU
+
+const removeDoge = remove('doge')
+const parseRemoveDoge = compose(spaceJoin, removeDoge, spaceSplit)
 
 // Robot Brain Utilities
 const {newUserCheckAndCreate} = RBU
@@ -13,21 +17,24 @@ const Misc = require('./expenseLogic/misc.js')
 
 const isExpenseValid = require('./expenseLogic/validate.js')
 
-const oneArgSlice = slice(3)
+const oneArgSlice = slice(2)
 const lastChar = slice(-1)
 
 const buildDescription = cmdArr => {
   const newArr = oneArgSlice(purify(cmdArr))
   let description = []
   let i = 0
-  while(lastChar(newArr[i]) != "\"") {
+
+  while (lastChar(newArr[i]) != "\"") {
     description.push(newArr[i])
     i++
   }
   description.push(newArr[i])
 
+  console.log('the goodies', spaceJoin(newArr.slice(i + 1, newArr.length)));
+
   return {description: spaceJoin(description),
-    catagory: newArr.slice(i + 1, newArr.length)[0]}
+    catagory: spaceJoin(newArr.slice(i + 1, newArr.length))}
 }
 
 module.exports = (robot) => {
@@ -85,23 +92,30 @@ module.exports = (robot) => {
   })
 
   robot.hear(/(.*)/i, function (msg) {
+    const incomingText = parseRemoveDoge(msg.message.text)
 
-    if (awaitingExpense) {
-      console.log('//// Running check!!... for some reason...');
+    console.log('incoming!', incomingText);
 
-      const {outcome, explain} = isExpenseValid.surfaceCheck(msg.message.text)
+    if (awaitingExpense && (/^[0-9]*$/i.test(incomingText[0]))) {
+
+      const {outcome, explain} = isExpenseValid.surfaceCheck(incomingText)
+
+      console.log('//// Running check!!... for some reason...', outcome);
+      console.log('//// Running check!!... for some reason...', explain);
 
       if (outcome) {
         //destructure and grab description, catagory, office and team
-        const {description, catagory} =  buildDescription(spaceSplit(msg.message.text))
+        const {description, catagory} =  buildDescription(spaceSplit(incomingText))
 
         const {office, team} = robot.brain.get(msg.message.user.id)
+
+        console.log('space split', spaceSplit(incomingText));
 
         expenseObj = {
           office, team, description, catagory,
           name: msg.message.user.name,
-          date: spaceSplit(msg.message.text)[1],
-          amount: spaceSplit(msg.message.text)[2]
+          date: spaceSplit(incomingText)[0],
+          amount: spaceSplit(incomingText)[1]
         }
 
         msg.reply(`Here is your expense: \n \n *office:* ${expenseObj.office} \n *team:* ${expenseObj.team} \n *date:* ${expenseObj.date} \n *amount:* ${expenseObj.amount} \n *description:* ${expenseObj.description} \n *catagory:* ${expenseObj.catagory} \n \n If the above looks correct respond by typing \`submit\``)
