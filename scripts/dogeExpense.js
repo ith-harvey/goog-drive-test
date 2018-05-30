@@ -5,7 +5,7 @@ const {FU, RBU} = require('./utils')
 const {authAndPostExpense} = require('./expenseLogic/APIResource.js')
 
 // functional Utilities
-const {spaceSplit, prop, equalModifier, newLineSplit, modObjKickBack, purify, slice, compose, spaceJoin, checkIfDMOrPublicm, remove} = FU
+const {spaceSplit, prop, equalModifier, newLineSplit, modObjKickBack, purify, slice, compose, spaceJoin, checkIfDMOrPublic, remove} = FU
 
 const removeDoge = remove('doge')
 const parseRemoveDoge = compose(spaceJoin, removeDoge, spaceSplit)
@@ -94,22 +94,15 @@ module.exports = (robot) => {
   robot.hear(/(.*)/i, function (msg) {
     const incomingText = parseRemoveDoge(msg.message.text)
 
-    console.log('incoming!', incomingText);
-
     if (awaitingExpense && (/^[0-9]*$/i.test(incomingText[0]))) {
 
       const {outcome, explain} = isExpenseValid.surfaceCheck(incomingText)
-
-      console.log('//// Running check!!... for some reason...', outcome);
-      console.log('//// Running check!!... for some reason...', explain);
 
       if (outcome) {
         //destructure and grab description, catagory, office and team
         const {description, catagory} =  buildDescription(spaceSplit(incomingText))
 
         const {office, team} = robot.brain.get(msg.message.user.id)
-
-        console.log('space split', spaceSplit(incomingText));
 
         expenseObj = {
           office, team, description, catagory,
