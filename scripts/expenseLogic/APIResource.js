@@ -2,8 +2,13 @@ const fs = require('fs')
 const readline = require('readline')
 const {google} = require('googleapis')
 
+const path = require('path');
+const credentialPath = path.join(__dirname, '..', '..', 'client_secret.json');
+
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 const TOKEN_PATH = 'credentials.json';
+
+
 
 // need function that checks if auth is fresh
 // if not fresh it runs the process and gets fresh authtoken
@@ -29,7 +34,7 @@ function postExpense(auth, expenseObj, msg) {
 }
 
 function authAndPostExpense(expenseObj, msg) {
-  fs.readFile('/Users/ianharvey/Documents/Programing/post-galvanize-projects/client-projects/dapphubb/doge-bot/client_secret.json', (err, content) => {
+  fs.readFile(credentialPath, (err, content) => {
     if (err) return console.log('Error loading client secret file:', err)
     // Authorize a client with credentials, then call the Google Sheets API.
     authorize(JSON.parse(content), postExpense, expenseObj, msg)
