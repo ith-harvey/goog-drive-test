@@ -80,58 +80,53 @@ module.exports = (robot) => {
 
   robot.respond(/(cal suggest)/i, function (msg) {
 
-      if (Misc.checkIfUserIsSetup(robot, msg.message.user.id)) {
-        msg.reply('To use the `@doge cal suggest` feature you must first go through the setup wizard. Do so by typing the command `@doge cal setup`.')
-      } else {
-        console.log('incoming message : ', msg.message.text);
+    if (Misc.checkIfUserIsSetup(robot, msg.message.user.id)) {
+      msg.reply('To use the `@doge cal suggest` feature you must first go through the setup wizard. Do so by typing the command `@doge cal setup`.')
+    } else {
+      console.log('incoming message : ', msg.message.text);
 
-        let Command = new IncomingCommand()
-        let UserArray = Command.interpreter(robot, msg.message)
+      let Command = new IncomingCommand()
+      let UserArray = Command.interpreter(robot, msg.message)
 
-        let userInfoPromiseArr = UserArray.arr.map(user => new Promise((resolve, reject) => resolve(rp(robot.brain.get(user.userId).busyCalUrl))))
+      let userInfoPromiseArr = UserArray.arr.map(user => new Promise((resolve, reject) => resolve(rp(robot.brain.get(user.userId).busyCalUrl))))
 
-        Promise.all(userInfoPromiseArr).then(userInfoArr => {  // response to GET user info
-          let response = []
+      Promise.all(userInfoPromiseArr).then(userInfoArr => {  // response to GET user info
+        let response = []
 
 
-          UserArray = Misc.completeUserInformation(robot, userInfoArr, UserArray, Command)
+        UserArray = Misc.completeUserInformation(robot, userInfoArr, UserArray, Command)
 
-          if (UserArray.error) {
-            return msg.reply(UserArray.error)
+        if (UserArray.error) {
+          return msg.reply(UserArray.error)
+        }
+
+        return Misc.setupFindAvailability(robot, UserArray)
+
+      }).then(allUsersAvailability => { // receive users availability
+
+        if (UserArray.arr.length > 1) {
+          // if more than one users info is supplied -> merge availability
+          while (allUsersAvailability.length >= 2) {
+            // run cross check with first 2 users info and remove them from arr
+
+            // re-add the merged availability and rerun until 1 avail is left
+            allUsersAvailability.unshift(Merge.availability(allUsersAvailability.shift(), allUsersAvailability.shift()))
           }
+        }
 
-          return Misc.setupFindAvailability(robot, UserArray)
-
-        }).then(allUsersAvailability => { // receive users availability
-
-          // console.log('allUsersAvailability pre merge:');
-          // allUsersAvailability.forEach(user => {
-          //   console.log(user);
-          // })
-
-          if (UserArray.arr.length > 1) {
-            // if more than one users info is supplied -> merge availability
-            while (allUsersAvailability.length >= 2) {
-              // run cross check with first 2 users info and remove them from arr
-
-              // re-add the merged availability and rerun until 1 avail is left
-              allUsersAvailability.unshift(Merge.availability(allUsersAvailability.shift(), allUsersAvailability.shift()))
-            }
-          }
-
-          console.log('allUsersAvailability post merge:');
-          allUsersAvailability.forEach(user => {
-            console.log(user);
-          })
-
-          msg.reply('Your current Timezone (set at fastmail.com): ' + UserArray.arr[0].get().timeZone)
-
-          msg.reply(Misc.dayVsWeekAvailLoopAndBuildSuggestions(allUsersAvailability, UserArray.arr[0].get().timeZone, UserArray.arr[0].get().datesRequested, Command))
-
-        }).catch(err => {
-          console.log('err', err)
-          return err
+        console.log('allUsersAvailability post merge:');
+        allUsersAvailability.forEach(user => {
+          console.log(user);
         })
-      }
-    })
+
+        msg.reply('Your current Timezone (set at fastmail.com): ' + UserArray.arr[0].get().timeZone)
+
+        msg.reply(Misc.dayVsWeekAvailLoopAndBuildSuggestions(allUsersAvailability, UserArray.arr[0].get().timeZone, UserArray.arr[0].get().datesRequested, Command))
+
+      }).catch(err => {
+        console.log('err', err)
+        return err
+      })
+    }
+  })
 }
