@@ -36,6 +36,8 @@ const boolValTranslator = val => val ? true : false
 
 const checkIfDMOrPublic = (msg) => msg.split(' ')[1] ? msg.split(' ')[1] : msg.split(' ')[0] // if in DM the mssge has an added 'doge' string -> this gets rid of it
 
+const returnTrue = () => true
+
 module.exports = {
   boolValTranslator,
   indexOf,
@@ -51,5 +53,6 @@ module.exports = {
   spaceSplit,
   spaceJoin,
   newLineSplit,
-  checkIfDMOrPublic
+  checkIfDMOrPublic,
+  returnTrue
 }

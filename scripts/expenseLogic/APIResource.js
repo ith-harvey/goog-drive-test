@@ -33,6 +33,29 @@ function postExpense(auth, expenseObj, msg) {
   });
 }
 
+function getActiveEmployees(auth, expenseObj, msg, getActEmplCallback) {
+  const sheets = google.sheets({version: 'v4', auth})
+  sheets.spreadsheets.values.get({
+    spreadsheetId: '149Msw2gNILyJ97Lyy3rX02btVBPuvaqIolewhvEeLuU',
+    range: 'Sheet1!B12:E81',
+    }, (err, response) => {
+    if (err) {
+      console.error('sheets error ->', err);
+      return msg.reply(`error retreiving active Maker employees: ${err}`)
+    }
+    console.log('/// /// successfully got active employees', response.data);
+    getActEmplCallback(expenseObj, msg, response.data)
+  });
+}
+
+function authAndGetActiveEmploy(expenseObj, msg, getActEmplCallback) {
+  fs.readFile(credentialPath, (err, content) => {
+    if (err) return console.log('Error loading client secret file:', err)
+    // Authorize a client with credentials, then call the Google Sheets API.
+    authorize(JSON.parse(content), getActiveEmployees, expenseObj, msg , getActEmplCallback)
+  })
+}
+
 function authAndPostExpense(expenseObj, msg) {
   fs.readFile(credentialPath, (err, content) => {
     if (err) return console.log('Error loading client secret file:', err)
@@ -47,7 +70,7 @@ function authAndPostExpense(expenseObj, msg) {
  * @param {Object} credentials The authorization client credentials.
  * @param {function} callback The callback to call with the authorized client.
  */
-function authorize(credentials, callback, expenseObj, msg) {
+function authorize(credentials, callback, expenseObj, msg, optionalCallBack) {
   const {client_secret, client_id, redirect_uris} = credentials.installed
   const oAuth2Client = new google.auth.OAuth2(
       client_id, client_secret, redirect_uris[0])
@@ -57,7 +80,7 @@ function authorize(credentials, callback, expenseObj, msg) {
     if (err) return getNewToken(oAuth2Client, callback, expenseObj, msg)
     oAuth2Client.setCredentials(JSON.parse(token))
 
-    callback(oAuth2Client, expenseObj, msg)
+    callback(oAuth2Client, expenseObj, msg, optionalCallBack)
   })
 }
 
@@ -96,5 +119,6 @@ function getNewToken(oAuth2Client, callback, expenseObj, msg) {
 
 
 module.exports = {
-  authAndPostExpense
+  authAndPostExpense,
+  authAndGetActiveEmploy
 }

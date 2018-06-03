@@ -2,7 +2,7 @@
 
 const {FU, RBU} = require('./utils')
 
-const {authAndPostExpense} = require('./expenseLogic/APIResource.js')
+const {authAndPostExpense, authAndGetActiveEmploy} = require('./expenseLogic/APIResource.js')
 
 // functional Utilities
 const {spaceSplit, prop, equalModifier, newLineSplit, modObjKickBack, purify, slice, compose, spaceJoin, checkIfDMOrPublic, remove} = FU
@@ -31,14 +31,38 @@ const buildDescription = cmdArr => {
   }
   description.push(newArr[i])
 
-  console.log('the goodies', spaceJoin(newArr.slice(i + 1, newArr.length)));
-
   return {description: spaceJoin(description),
     catagory: spaceJoin(newArr.slice(i + 1, newArr.length))}
 }
 
+  const getActEmplCallback = (expenseObj, msg, response) => {
+
+    if (response) {
+      let activEmployeeObj = {}
+
+      // build activEmployeeObj
+      response.values.forEach( row => {
+        if (!row[3]) return // removes all people who havent setup rocket.chat
+        activEmployeeObj[row[3]] = row[0]
+      })
+
+      if (activEmployeeObj[msg.message.user.id] === undefined) {
+        return msg.reply(`you are not set as an active Maker employee and therfore cannot post expenses `)
+      } else if ((activEmployeeObj[msg.message.user.id] === 'yes')
+      || (activEmployeeObj['@ethan'].slice(0,5) === 'until')) {
+        msg.reply(`:ballot_box_with_check: You are an active employee at Maker.`)
+        authAndPostExpense(expenseObj, msg)
+
+      } else {
+        return msg.reply(`you are not set as an active Maker employee and therefore cannot post an expense. If you beleive this is a mistake or an error please reach out to the expense bot creator \`@iant\`.`)
+      }
+    }
+  }
+
 module.exports = (robot) => {
   let expenseObj = {}
+
+  // use bool variables to accept / reject user input depending on what stage of the expense they are in
   let awaitingOffice = false
   let awaitingTeam = false
   let awaitingExpense = false
@@ -128,27 +152,10 @@ module.exports = (robot) => {
     if (awaitingSubmit) {
       const {outcome, explain} = isExpenseValid.deepCheck(expenseObj)
 
-      if (outcome) {
-        msg.reply(`:ballot_box_with_check: ${explain}`)
-
-        expenseObj.amount = `$${expenseObj.amount}`
-
-        authAndPostExpense(expenseObj, msg)
-
-      } else if (!outcome) {
-
-        let validationErrors = ''
-        explain.forEach( valErr => {
-          validationErrors += `:x:${valErr} \n`
-        })
-        msg.reply(`Your expense was not valid in the following areas: \n ${validationErrors} \n please re attempt the expense by typing \`@doge expense create\` `)
-      }
+      authAndGetActiveEmploy(expenseObj, msg, getActEmplCallback)
 
       awaitingSubmit = false
     }
   })
-
-
-
 
 }
