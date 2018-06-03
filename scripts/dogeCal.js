@@ -102,7 +102,7 @@ module.exports = (robot) => {
 
         return Misc.setupFindAvailability(robot, UserArray)
 
-      }).then(allUsersAvailability => { // receive users availability
+      }).then(allUsersAvailability => { //receive users availability
 
         if (UserArray.arr.length > 1) {
           // if more than one users info is supplied -> merge availability
