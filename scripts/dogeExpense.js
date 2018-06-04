@@ -5,7 +5,7 @@ const {FU, RBU} = require('./utils')
 const {authAndPostExpense, authAndGetActiveEmploy} = require('./expenseLogic/APIResource.js')
 
 // functional Utilities
-const {spaceSplit, prop, equalModifier, newLineSplit, modObjKickBack, purify, slice, compose, spaceJoin, checkIfDMOrPublic, remove} = FU
+const {spaceSplit, prop, equalModifier, newLineSplit, modObjKickBack, purify, slice, compose, spaceJoin, remove} = FU
 
 const removeDoge = remove('doge')
 const parseRemoveDoge = compose(spaceJoin, removeDoge, spaceSplit)
@@ -50,7 +50,7 @@ const buildDescription = cmdArr => {
         return msg.reply(`You are not setup as an active Maker employee and therefore cannot post an expense. If you beleive this is a mistake or an error please reach out to the expense bot creator \`@iant\`.`)
 
       } else if ((activEmployeeObj[msg.message.user.id] === 'yes')
-      || (activEmployeeObj['@ethan'].slice(0,5) === 'until')) {
+      || (activEmployeeObj[msg.message.user.id].slice(0,5) === 'until')) {
         msg.reply(`:ballot_box_with_check: You are an active employee at Maker.`)
         authAndPostExpense(expenseObj, msg)
 
@@ -76,7 +76,11 @@ module.exports = (robot) => {
 
   robot.hear(/(New York City|Santa Cruz|China|Copenhagen|Remote)/i, (msg) => {
     if (awaitingOffice) {
-      msg.message.text = checkIfDMOrPublic(msg.message.text)
+      console.log('office coming in', msg.message.text);
+
+      msg.message.text = parseRemoveDoge(msg.message.text)
+
+      console.log('office reassigned', msg.message.text);
 
       newUserCheckAndCreate(robot, msg.message.user.id)
 
@@ -94,7 +98,7 @@ module.exports = (robot) => {
 
   robot.hear(/(Executive|Marketing|Oasis|Market Making|Legal|Code Development|Integrations|Business Dev|Other)/i, (msg) => {
     if (awaitingTeam) {
-      msg.message.text = checkIfDMOrPublic(msg.message.text)
+      msg.message.text = parseRemoveDoge(msg.message.text)
 
       //addTeam and get back userObj
       const addTeam = modObjKickBack('team', msg.message.text)
