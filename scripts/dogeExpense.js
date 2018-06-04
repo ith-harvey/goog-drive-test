@@ -47,14 +47,15 @@ const buildDescription = cmdArr => {
       })
 
       if (activEmployeeObj[msg.message.user.id] === undefined) {
-        return msg.reply(`you are not set as an active Maker employee and therfore cannot post expenses `)
+        return msg.reply(`You are not setup as an active Maker employee and therefore cannot post an expense. If you beleive this is a mistake or an error please reach out to the expense bot creator \`@iant\`.`)
+
       } else if ((activEmployeeObj[msg.message.user.id] === 'yes')
       || (activEmployeeObj['@ethan'].slice(0,5) === 'until')) {
         msg.reply(`:ballot_box_with_check: You are an active employee at Maker.`)
         authAndPostExpense(expenseObj, msg)
 
       } else {
-        return msg.reply(`you are not set as an active Maker employee and therefore cannot post an expense. If you beleive this is a mistake or an error please reach out to the expense bot creator \`@iant\`.`)
+        return msg.reply(`You are not setup as an active Maker employee and therefore cannot post an expense. If you beleive this is a mistake or an error please reach out to the expense bot creator \`@iant\`.`)
       }
     }
   }
