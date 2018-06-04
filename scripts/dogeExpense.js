@@ -32,7 +32,7 @@ const buildDescription = cmdArr => {
   description.push(newArr[i])
 
   return {description: spaceJoin(description),
-    catagory: spaceJoin(newArr.slice(i + 1, newArr.length))}
+    catagory: spaceJoin(newArr.slice(i + 1, newArr.length)).trim()}
 }
 
   const getActEmplCallback = (expenseObj, msg, response) => {
