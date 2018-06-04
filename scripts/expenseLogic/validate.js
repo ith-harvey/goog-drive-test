@@ -30,11 +30,9 @@ const amount = (text, outcome) => /^\d+(\.\d{2,2})*$/i.test(text) ? '' : outcome
 
 const description = (text, outcome) => /(")(.*)(")$/i.test(text) ?  '' : outcome.failure("The description is not valid")
 
-const date = (text, outcome) => /([0-9][0-9]\/[0-9][0-9]\/[0-9][0-9][0-9][0-9])/i.test(text) ? '' : outcome.failure("The date is not valid")
+const date = (text, outcome) => /^([0-9][0-9][0-9][0-9]\/[0-9][0-9]\/[0-9][0-9])$/i.test(text) ? '' : outcome.failure("The date is not valid")
 
 const surfaceCheck = (text) => {
-
-  console.log('in surf', text);
   // is the expense valid?
   return /^[0-9\/]+ [0-9\.]+ (")(.*)(") [a-zA-Z_ ]*$/i.test(text) ?
   {outcome: true, explain: 'expense is in correct format'} : // valid
@@ -49,7 +47,7 @@ const deepCheck = expObj => {
   description(expObj.description, outcome)
 
   return (outcome.getFailures().length === 0) ? // is the expense valid?
-  {outcome: true, explain: 'expense has been validated'} : //expense is valid
+  {outcome: true, explain: ' Expense has been validated.'} : //expense is valid
   {outcome: false, explain: outcome.getFailures() } //expense is not valid
 }
 

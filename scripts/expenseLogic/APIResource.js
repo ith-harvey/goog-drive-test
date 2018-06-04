@@ -17,7 +17,7 @@ function postExpense(auth, expenseObj, msg) {
   sheets.spreadsheets.values.append({
     spreadsheetId: '11tC3V-TV3VLinv3P9bWaeNHxy4wR4H10PtHROfcFwi4',
     range: 'Sheet1!C4:I',
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: 'RAW',
     insertDataOption: 'INSERT_ROWS',
     resource: {
       values: [[expenseObj.date, expenseObj.name, expenseObj.office, expenseObj.team, expenseObj.catagory, expenseObj.description, expenseObj.amount]]
@@ -27,7 +27,7 @@ function postExpense(auth, expenseObj, msg) {
       console.error('sheets error ->', err);
       msg.reply(`error posting to google sheet: ${err}`)
     }
-    msg.reply(':ballot_box_with_check: successfully sent expense to master google sheet')
+    msg.reply(':ballot_box_with_check: Successfully sent expense to master google sheet.')
   });
 }
 

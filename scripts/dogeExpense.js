@@ -112,7 +112,7 @@ module.exports = (robot) => {
       return msg.reply('To use the `@doge expense create` feature you must first go through the setup wizard. Do so by typing the command `@doge expense setup`.')
     }
 
-    msg.reply('Hi, welcome to expense creator. I accept the following format for expenses: \n \n `<date(DD/MM/YYYY)> <amount(in USD)> <"description of purchase"> <category>`\n \n Expense catagories (only apply one catagory to one expense): \n *Accomodation* \n *Flight* \n *Train* \n *Lyft* \n *Uber* \n *Taxi* \n *Breakfast* \n *Lunch* \n *Dinner* \n *Drinks* \n *Conference Sponsorship* \n *Conference Tickets* \n *Parking* \n *Gym Membership* \n *Bug Bounties* \n *Rent* \n *Maker Clothing* \n *Other* \n \n Example: \n `10/28/2018 130.20 "Such wow dog treats...for a client of course!" lunch`')
+    msg.reply('Hi, welcome to expense creator. I accept the following format for expenses: \n \n `<date(YYYY/MM/DD)> <amount(in USD)> <"description of purchase"> <category>`\n \n Expense catagories (only apply one catagory to one expense): \n *Accomodation* \n *Flight* \n *Train* \n *Lyft* \n *Uber* \n *Taxi* \n *Breakfast* \n *Lunch* \n *Dinner* \n *Drinks* \n *Conference Sponsorship* \n *Conference Tickets* \n *Parking* \n *Gym Membership* \n *Bug Bounties* \n *Rent* \n *Maker Clothing* \n *Other* \n \n Example: \n `2018/10/28 130.20 "Such wow dog treats...for a client of course!" lunch`')
 
     awaitingExpense = true
   })
@@ -153,8 +153,19 @@ module.exports = (robot) => {
 
     if (awaitingSubmit) {
       const {outcome, explain} = isExpenseValid.deepCheck(expenseObj)
+      console.log('explain', explain);
+      console.log('outcome', outcome);
 
-      authAndGetActiveEmploy(expenseObj, msg, getActEmplCallback)
+      if (outcome) {
+        msg.reply(`:ballot_box_with_check:${explain}`)
+        authAndGetActiveEmploy(expenseObj, msg, getActEmplCallback)
+      } else if (!outcome) {
+        let validationErrors = ''
+        explain.forEach( valErr => {
+          validationErrors += `:x:${valErr} \n`
+        })
+        msg.reply(`Your expense was not valid in the following areas: \n ${validationErrors} \n please re attempt the expense by typing \`@doge expense create\` `)
+      }
 
       awaitingSubmit = false
     }
