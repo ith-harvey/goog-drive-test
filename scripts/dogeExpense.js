@@ -39,6 +39,7 @@ const buildDescription = cmdArr => {
 
     if (response) {
       let activEmployeeObj = {}
+      let username = `@${msg.message.user.name}`
 
       // build activEmployeeObj
       response.values.forEach( row => {
@@ -46,11 +47,15 @@ const buildDescription = cmdArr => {
         activEmployeeObj[row[3]] = row[0]
       })
 
-      if (activEmployeeObj[msg.message.user.id] === undefined) {
+      console.log('pulling @zandy', activEmployeeObj[username]);
+      console.log('id incoming', username);
+
+
+      if (activEmployeeObj[username] === undefined) {
         return msg.reply(`You are not setup as an active Maker employee and therefore cannot post an expense. If you beleive this is a mistake or an error please reach out to the expense bot creator \`@iant\`.`)
 
-      } else if ((activEmployeeObj[msg.message.user.id] === 'yes')
-      || (activEmployeeObj[msg.message.user.id].slice(0,5) === 'until')) {
+      } else if ((activEmployeeObj[username] === 'yes')
+      || (activEmployeeObj[username].slice(0,5) === 'until')) {
         msg.reply(`:ballot_box_with_check: You are an active employee at Maker.`)
         authAndPostExpense(expenseObj, msg)
 
@@ -76,11 +81,7 @@ module.exports = (robot) => {
 
   robot.hear(/(New York City|Santa Cruz|China|Copenhagen|Remote)/i, (msg) => {
     if (awaitingOffice) {
-      console.log('office coming in', msg.message.text);
-
       msg.message.text = parseRemoveDoge(msg.message.text)
-
-      console.log('office reassigned', msg.message.text);
 
       newUserCheckAndCreate(robot, msg.message.user.id)
 
