@@ -47,10 +47,6 @@ const buildDescription = cmdArr => {
         activEmployeeObj[row[3]] = row[0]
       })
 
-      console.log('pulling @zandy', activEmployeeObj[username]);
-      console.log('id incoming', username);
-
-
       if (activEmployeeObj[username] === undefined) {
         return msg.reply(`You are not setup as an active Maker employee and therefore cannot post an expense. If you beleive this is a mistake or an error please reach out to the expense bot creator \`@iant\`.`)
 
