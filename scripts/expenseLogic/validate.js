@@ -24,7 +24,7 @@ class OutcomeObj {
   }
 }
 
-const catagory = (text, outcome) => /^(Accomodation|Flight|Train|Lyft|Uber|Taxi|Breakfast|Lunch|Dinner|Drinks|Conference Sponsorship|Conference Tickets|Parking|Gym Membership|Bug Bounties|Rent|Maker Clothing|Other)$/i.test(text) ? '' : outcome.failure("The catagory is not valid")
+const catagory = (text, outcome) => /^(Accomodation|Flight|Train|Lyft|Uber|Taxi|Breakfast|Lunch|Dinner|Drinks|Conference Sponsorship|Conference Tickets|Parking|Gym Membership|Bug Bounties|Rent|Maker Clothing|Other)$/i.test(text) ? '' : outcome.failure("The catagory is not valid (be sure to remove all trailing spaces)")
 
 const amount = (text, outcome) => /^\d+(\.\d{2,2})*$/i.test(text) ? '' : outcome.failure("The amount is not valid")
 
