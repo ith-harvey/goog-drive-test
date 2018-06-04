@@ -53,6 +53,7 @@ const buildDescription = cmdArr => {
       } else if ((activEmployeeObj[username] === 'yes')
       || (activEmployeeObj[username].slice(0,5) === 'until')) {
         msg.reply(`:ballot_box_with_check: You are an active employee at Maker.`)
+        expenseObj.amount = `$${expenseObj.amount}`
         authAndPostExpense(expenseObj, msg)
 
       } else {
