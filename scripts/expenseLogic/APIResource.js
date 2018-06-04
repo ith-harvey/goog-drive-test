@@ -27,8 +27,6 @@ function postExpense(auth, expenseObj, msg) {
       console.error('sheets error ->', err);
       msg.reply(`error posting to google sheet: ${err}`)
     }
-
-    console.log('successfully posted to sheets!');
     msg.reply(':ballot_box_with_check: successfully sent expense to master google sheet')
   });
 }
@@ -43,7 +41,6 @@ function getActiveEmployees(auth, expenseObj, msg, getActEmplCallback) {
       console.error('sheets error ->', err);
       return msg.reply(`error retreiving active Maker employees: ${err}`)
     }
-    console.log('/// /// successfully got active employees', response.data);
     getActEmplCallback(expenseObj, msg, response.data)
   });
 }
