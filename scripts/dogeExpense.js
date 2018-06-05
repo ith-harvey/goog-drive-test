@@ -146,7 +146,6 @@ module.exports = (robot) => {
         awaitingSubmit = false
       }
       awaitingExpense = false
-
     }
   })
 
