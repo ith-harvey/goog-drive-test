@@ -1,24 +1,32 @@
 
-
+const path = require("path");
+const childProcess = require('child_process')
 const {FU, RBU} = require('./utils')
 
-const {authAndPostExpense, authAndGetActiveEmploy} = require('./expenseLogic/APIResource.js')
+const {Gsheets, Dropbox} = require('./expenseLogic/api')
 
 // functional Utilities
-const {spaceSplit, prop, equalModifier, newLineSplit, modObjKickBack, purify, slice, compose, spaceJoin, remove} = FU
-
-const removeDoge = remove('doge')
-const parseRemoveDoge = compose(spaceJoin, removeDoge, spaceSplit)
+const {spaceSplit, prop, equalModifier, newLineSplit, modObjKickBack, purify, slice, compose, spaceJoin, defaultJoin, remove, execPromise} = FU
 
 // Robot Brain Utilities
 const {newUserCheckAndCreate} = RBU
 
+const expenseResp = require('./expenseLogic/responses')
 const Misc = require('./expenseLogic/misc.js')
-
 const isExpenseValid = require('./expenseLogic/validate.js')
 
+const checkTeamExpenseLimit = (team) => execPromise(`ledger bal Assets:${team} -f "${path.resolve(__dirname)}/expenseLogic/ledgerAccFiles/currentMonthAcc.dat"`)
+
+const removeDoge = remove('doge')
+const parseRemoveDoge = compose(spaceJoin, removeDoge, spaceSplit)
+
+const removeSpace = remove(' ')
+const parseRemoveSpace = compose(defaultJoin, removeSpace, spaceSplit)
+const parseRemoveSpaceArr = compose(removeSpace, spaceSplit)
 const oneArgSlice = slice(2)
 const lastChar = slice(-1)
+
+const ChatURL = 'http://159.65.101.16:3000'
 
 const buildDescription = cmdArr => {
   const newArr = oneArgSlice(purify(cmdArr))
@@ -35,34 +43,8 @@ const buildDescription = cmdArr => {
     catagory: spaceJoin(newArr.slice(i + 1, newArr.length)).trim()}
 }
 
-  const getActEmplCallback = (expenseObj, msg, response) => {
-
-    if (response) {
-      let activEmployeeObj = {}
-      let username = `@${msg.message.user.name}`
-
-      // build activEmployeeObj
-      response.values.forEach( row => {
-        if (!row[3]) return // removes all people who havent setup rocket.chat
-        activEmployeeObj[row[3]] = row[0]
-      })
-
-      if (activEmployeeObj[username] === undefined) {
-        return msg.reply(`You are not setup as an active Maker employee and therefore cannot post an expense. If you beleive this is a mistake or an error please reach out to the expense bot creator \`@iant\`.`)
-
-      } else if ((activEmployeeObj[username] === 'yes')
-      || (activEmployeeObj[username].slice(0,5) === 'until')) {
-        msg.reply(`:ballot_box_with_check: You are an active employee at Maker.`)
-        expenseObj.amount = `$${expenseObj.amount}`
-        authAndPostExpense(expenseObj, msg)
-
-      } else {
-        return msg.reply(`You are not setup as an active Maker employee and therefore cannot post an expense. If you beleive this is a mistake or an error please reach out to the expense bot creator \`@iant\`.`)
-      }
-    }
-  }
-
 module.exports = (robot) => {
+
   let expenseObj = {}
 
   // use bool variables to accept / reject user input depending on what stage of the expense they are in
@@ -70,6 +52,7 @@ module.exports = (robot) => {
   let awaitingTeam = false
   let awaitingExpense = false
   let awaitingSubmit = false
+  let awaitingInvoiceUpload = false
 
   robot.respond(/(expense setup)/i, (msg) => {
     msg.reply('Hi, welcome to expense setup wizard. Please select which office you work for or are permenently based out of: \n \n *New York City* \n *Santa Cruz* \n *China* \n *Copenhagen* \n *Remote*')
@@ -77,6 +60,7 @@ module.exports = (robot) => {
   })
 
   robot.hear(/(New York City|Santa Cruz|China|Copenhagen|Remote)/i, (msg) => {
+    console.log('heard it!', msg.message.text);
     if (awaitingOffice) {
       msg.message.text = parseRemoveDoge(msg.message.text)
 
@@ -108,14 +92,22 @@ module.exports = (robot) => {
     }
   })
 
-  robot.respond(/(expense create)/i, (msg) => {
+  robot.respond(/(expense create)$/i, (msg) => {
+
     if (Misc.checkIfUserIsSetup(robot, msg.message.user.id)) {
       return msg.reply('To use the `@doge expense create` feature you must first go through the setup wizard. Do so by typing the command `@doge expense setup`.')
     }
 
-    msg.reply('Hi, welcome to expense creator. I accept the following format for expenses: \n \n `<date(YYYY/MM/DD)> <amount(in USD)> <"description of purchase"> <category>`\n \n Expense catagories (only apply one catagory to one expense): \n *Accomodation* \n *Flight* \n *Train* \n *Lyft* \n *Uber* \n *Taxi* \n *Breakfast* \n *Lunch* \n *Dinner* \n *Drinks* \n *Conference Sponsorship* \n *Conference Tickets* \n *Parking* \n *Gym Membership* \n *Bug Bounties* \n *Rent* \n *Maker Clothing* \n *Other* \n \n Example: \n `2018/03/01 130.20 "Such wow dog treats...for a client of course!" lunch`')
-
-    awaitingExpense = true
+    Gsheets.authAndGetActiveEmploy(msg).then(response => {
+      const {outcome, explain} = response
+      if (!outcome) {
+        // problem with request to goog sheet or they are not an active employee
+        return msg.reply(explain)
+      }
+      //active employee
+      msg.reply(expenseResp.create())
+      awaitingExpense = true
+    })
   })
 
   robot.hear(/(.*)/i, function (msg) {
@@ -138,33 +130,68 @@ module.exports = (robot) => {
           amount: spaceSplit(incomingText)[1]
         }
 
-        msg.reply(`Here is your expense: \n \n *office:* ${expenseObj.office} \n *team:* ${expenseObj.team} \n *date:* ${expenseObj.date} \n *amount:* ${expenseObj.amount} \n *description:* ${expenseObj.description} \n *catagory:* ${expenseObj.catagory} \n \n If the above looks correct respond by typing \`submit\``)
-        awaitingSubmit = true
+        expenseObj = Misc.objectToLowerCase(expenseObj)
+
+        msg.reply(expenseResp.textUploaded(expenseObj))
+        awaitingInvoiceUpload = true
 
       } else {
         msg.reply(explain)
-        awaitingSubmit = false
+        awaitingInvoiceUpload = false
       }
       awaitingExpense = false
     }
   })
 
+  robot.hear(/(.*)/i, function (msg) {
+    if (awaitingInvoiceUpload && msg.message.attachment.title_link) {
+      expenseObj.invFileType = msg.message.attachment.title.substr(msg.message.attachment.title.length - 4)
+      msg.reply(expenseResp.pdfReceived())
+      expenseObj.downloadLink = `${ChatURL}${msg.message.attachment.title_link}`
+      awaitingInvoiceUpload = false
+      awaitingSubmit = true
+    }
+  })
+
+
   robot.hear(/(submit)/i, function (msg) {
 
     if (awaitingSubmit) {
-      const {outcome, explain} = isExpenseValid.deepCheck(expenseObj)
+      let valid = {}
+      valid.synDeepCheck = isExpenseValid.deepCheck(expenseObj)
 
-      if (outcome) {
-        msg.reply(`:ballot_box_with_check:${explain}`)
-        authAndGetActiveEmploy(expenseObj, msg, getActEmplCallback)
-      } else if (!outcome) {
+      if (!valid.synDeepCheck.outcome) { // compile and return validation errors
         let validationErrors = ''
-        explain.forEach( valErr => {
-          validationErrors += `:x:${valErr} \n`
-        })
-        msg.reply(`Your expense was not valid in the following areas: \n ${validationErrors} \n please re attempt the expense by typing \`@doge expense create\` `)
+        valid.synDeepCheck.explain.forEach( valErr => validationErrors += `:x:${valErr} \n`)
+        return msg.reply(`Your expense was not valid in the following areas: \n ${validationErrors} \n please re attempt the expense by typing \`@doge expense create\``)
       }
+      msg.reply(`:ballot_box_with_check:${valid.synDeepCheck.explain}`)
 
+      // either pass message into each Promise OR wait untill the last .then and compile all successes
+
+      Gsheets.authAndCheckTeamLimit(expenseObj)
+      .then(RBU.getAuthToken)
+      .then(resp => Dropbox.downloadInvoice(expenseObj.downloadLink, resp.data.authToken, resp.data.userId))
+      .then(fileContent => Dropbox.uploadInvoice(fileContent, expenseObj))
+      .then(resp => {
+        expenseObj.invoiceURL = `https://dropbox.com/home/${resp.path_lower}`
+        return Gsheets.authAndGetEthAddr(expenseObj)
+      }).then(resp => {
+        expenseObj.userEthAddr = resp
+        return Gsheets.authAndPostExpense(expenseObj)
+      })
+      .then(response => {
+        msg.reply(`:ballot_box_with_check: Expense submission was successful`)
+      }).catch( error => {
+        msg.reply(`:x: ${error}`)
+        console.log('error', error);
+
+        // Notify Accountant that someone is attempting to over withdraw
+        if (error.slice(0,26) === 'Unfortunatley your expense') {
+          RBU.sendUserMessage(expenseResp.notifyExpAlert(expenseObj, FU), robot, `iant`)
+        }
+
+      })
       awaitingSubmit = false
     }
   })

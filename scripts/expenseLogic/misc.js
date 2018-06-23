@@ -18,6 +18,14 @@ function checkIfUserIsSetup(robot, userId) {
   return false // user is already setup for expensing
 }
 
+const objectToLowerCase = (expenseObj) => {
+  for (let k in expenseObj) {
+    expenseObj[k] = expenseObj[k].toLowerCase()
+  }
+  return expenseObj
+}
+
 module.exports = {
-  checkIfUserIsSetup
+  checkIfUserIsSetup,
+  objectToLowerCase
 }

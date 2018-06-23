@@ -1,3 +1,10 @@
+
+// Requirements for certain util functions
+const {exec} = require('child_process')
+const fs = require('fs')
+
+//
+
 const compose = (...fns) => fns.reduce((f, g) => (...args) => f(g(...args)))
 
 const regTest = regexString => testText => regexString.test(testText)
@@ -18,6 +25,8 @@ const join = sep => array => array.join(sep)
 
 const spaceJoin = join(' ')
 
+const defaultJoin = join('')
+
 const purify = x => JSON.parse(JSON.stringify(x))
 
 const push = (x, array) => array.push(x)
@@ -34,9 +43,35 @@ const modObjKickBack = (prop, value) => object => {
 
 const boolValTranslator = val => val ? true : false
 
+const getTodaysDateInUTC = () => {
+  const tD = new Date()
+  return `${tD.getUTCFullYear()}/${("0" + (tD.getUTCMonth() + 1)).slice(-2)}/${("0" + tD.getUTCDate()).slice(-2)}`
+}
+
+
+
+
 const checkIfDMOrPublic = (msg) => msg.split(' ')[1] ? msg.split(' ')[1] : msg.split(' ')[0] // if in DM the mssge has an added 'doge' string -> this gets rid of it
 
 const returnTrue = () => true
+
+const promiseWraper = () => new Promise( (resolve, reject) => {
+
+})
+
+const execPromise = cmd => new Promise( (resolve, reject) => {
+  exec(cmd, function(err, stdout, stderr) {
+    if (err) return reject(err)
+    return resolve(stdout);
+  });
+});
+
+const readFilePromise = credentialPath => new Promise( (resolve, reject) => {
+  fs.readFile(credentialPath, (err, content) => {
+    if (err) return reject(err)
+    return resolve(content);
+  })
+});
 
 module.exports = {
   boolValTranslator,
@@ -54,5 +89,9 @@ module.exports = {
   spaceJoin,
   newLineSplit,
   checkIfDMOrPublic,
-  returnTrue
+  returnTrue,
+  execPromise,
+  readFilePromise,
+  defaultJoin,
+  getTodaysDateInUTC
 }

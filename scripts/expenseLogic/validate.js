@@ -26,11 +26,24 @@ class OutcomeObj {
 
 const catagory = (text, outcome) => /^(Accomodation|Flight|Train|Lyft|Uber|Taxi|Breakfast|Lunch|Dinner|Drinks|Conference Sponsorship|Conference Tickets|Parking|Gym Membership|Bug Bounties|Rent|Maker Clothing|Other)$/i.test(text) ? '' : outcome.failure("The catagory is not valid (be sure to remove all trailing spaces)")
 
-const amount = (text, outcome) => /^\d+(\.\d{2,2})*$/i.test(text) ? '' : outcome.failure("The amount is not valid")
+const amount = (text, outcome) => {
+  amountSyntax(text, outcome)
+  lessThanExpenseCap(text, outcome)
+}
+
+const amountSyntax = (text, outcome) => /^\d+(\.\d{2,2})*$/i.test(text) ? '' : outcome.failure("The amount format is not valid")
+
+const lessThanExpenseCap = (text, outcome) => {
+  return (Number(text) < 7000) ? '' : outcome.failure("Individual expenses can not be greater $7,000.00")
+}
 
 const description = (text, outcome) => /(")(.*)(")$/i.test(text) ?  '' : outcome.failure("The description is not valid")
 
 const date = (text, outcome) => /^([0-9][0-9][0-9][0-9]\/[0-9][0-9]\/[0-9][0-9])$/i.test(text) ? '' : outcome.failure("The date is not valid")
+
+const fileType = (text, outcome) => {
+  /^(.png|.zip|.jpg|.pdf)$/i.test(text) ? '' : outcome.failure("the invoice file is not in accepted file format, please reupload in `.pdf`, `.jpg`, `.zip` or `.png` format.")
+}
 
 const surfaceCheck = (text) => {
   // is the expense valid?
@@ -45,6 +58,7 @@ const deepCheck = expObj => {
   date(expObj.date, outcome)
   amount(expObj.amount, outcome)
   description(expObj.description, outcome)
+  fileType(expObj.invFileType, outcome)
 
   return (outcome.getFailures().length === 0) ? // is the expense valid?
   {outcome: true, explain: ' Expense has been validated.'} : //expense is valid

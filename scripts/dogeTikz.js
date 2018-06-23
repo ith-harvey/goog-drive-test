@@ -1,10 +1,9 @@
 require('dotenv').config()
 const rp = require('request-promise');
 const fs = require('fs');
-const {exec} = require('child_process')
 
 const { FU } = require('./utils')
-const {compose, spaceJoin, spaceSplit, remove, newLineSplit} = FU
+const {compose, spaceJoin, spaceSplit, remove, newLineSplit, execPromise} = FU
 
 const removeDoge = remove('doge')
 const removeDirectLine = remove('@doge tikz direct')
@@ -45,13 +44,6 @@ const buildPost = imgInBase64 => {
 
 const HTTPrequest = options => rp(options)
 
-const execPromise = cmd => new Promise( (resolve, reject) => {
-  exec(cmd, function(err, stdout, stderr) {
-    if (err) return reject(err)
-    return resolve(stdout);
-  });
-});
-
 const laTexCreationFlow = (msg) => {
   return laTexToPDF()
   .then(pdfToJPG)
@@ -69,13 +61,9 @@ const pdfToJPG = () => execPromise('convert -density 300 laTexFile.pdf -quality 
 const jpgToBase64 = () => execPromise('openssl base64 -in laTexFile.jpg')
 
 module.exports = (robot) => {
-
   let awaitingTikzCode = false
-
   robot.respond(/(tikz direct)/i, function (msg) {
-
     addBoilerAndCreateFile(parseRemoveDirect(msg.message.text))
-
     laTexCreationFlow(msg)
   })
 
