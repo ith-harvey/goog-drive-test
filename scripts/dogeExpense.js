@@ -13,7 +13,7 @@ const {newUserCheckAndCreate} = RBU
 
 const expenseResp = require('./expenseLogic/responses')
 const Misc = require('./expenseLogic/misc.js')
-const isExpenseValid = require('./expenseLogic/validate.js')
+const {isExpenseValid, isSetupValid} = require('./expenseLogic/validate.js')
 
 const checkTeamExpenseLimit = (team) => execPromise(`ledger bal Assets:${team} -f "${path.resolve(__dirname)}/expenseLogic/ledgerAccFiles/currentMonthAcc.dat"`)
 
@@ -25,8 +25,6 @@ const parseRemoveSpace = compose(defaultJoin, removeSpace, spaceSplit)
 const parseRemoveSpaceArr = compose(removeSpace, spaceSplit)
 const oneArgSlice = slice(2)
 const lastChar = slice(-1)
-
-const ChatURL = 'http://159.65.101.16:3000'
 
 const buildDescription = cmdArr => {
   const newArr = oneArgSlice(purify(cmdArr))
@@ -60,14 +58,21 @@ module.exports = (robot) => {
   })
 
   robot.hear(/(New York City|Santa Cruz|China|Copenhagen|Remote)/i, (msg) => {
-    console.log('heard it!', msg.message.text);
+    const incomingText = parseRemoveDoge(msg.message.text)
     if (awaitingOffice) {
-      msg.message.text = parseRemoveDoge(msg.message.text)
+      const {outcome, explain} = isSetupValid.setupCheckOffice(incomingText)
+
+      if (!outcome) {
+        msg.reply(explain)
+        awaitingOffice = false
+        awaitingTeam = false
+        return
+      }
 
       newUserCheckAndCreate(robot, msg.message.user.id)
 
       //addOffice and get back userObj
-      const addOffice = modObjKickBack('office', msg.message.text)
+      const addOffice = modObjKickBack('office', incomingText)
 
       robot.brain.set(msg.message.user.id, addOffice(robot.brain.get(msg.message.user.id)))
 
@@ -79,7 +84,16 @@ module.exports = (robot) => {
   })
 
   robot.hear(/(Executive|Marketing|Oasis|Market Making|Legal|Code Development|Integrations|Business Dev|Other)/i, (msg) => {
+    const incomingText = parseRemoveDoge(msg.message.text)
     if (awaitingTeam) {
+      const {outcome, explain} = isSetupValid.setupCheckTeam(incomingText)
+
+      if (!outcome) {
+        msg.reply(explain)
+        awaitingOffice = false
+        awaitingTeam = false
+        return
+      }
       msg.message.text = parseRemoveDoge(msg.message.text)
 
       //addTeam and get back userObj
@@ -120,7 +134,6 @@ module.exports = (robot) => {
       if (outcome) {
         //destructure and grab description, catagory, office and team
         const {description, catagory} =  buildDescription(spaceSplit(incomingText))
-
         const {office, team} = robot.brain.get(msg.message.user.id)
 
         expenseObj = {
@@ -129,8 +142,17 @@ module.exports = (robot) => {
           date: spaceSplit(incomingText)[0],
           amount: spaceSplit(incomingText)[1]
         }
-
         expenseObj = Misc.objectToLowerCase(expenseObj)
+
+        let valid = {}
+        valid.synDeepCheck = isExpenseValid.deepCheck(expenseObj)
+
+        if (!valid.synDeepCheck.outcome) { // compile and return validation errors
+          let validationErrors = ''
+          valid.synDeepCheck.explain.forEach( valErr => validationErrors += `:x:${valErr} \n`)
+          return msg.reply(`Your expense was not valid in the following areas: \n ${validationErrors} \n please re attempt the expense by typing \`@doge expense create\``)
+        }
+        msg.reply(`:ballot_box_with_check:${valid.synDeepCheck.explain}`)
 
         msg.reply(expenseResp.textUploaded(expenseObj))
         awaitingInvoiceUpload = true
@@ -146,8 +168,9 @@ module.exports = (robot) => {
   robot.hear(/(.*)/i, function (msg) {
     if (awaitingInvoiceUpload && msg.message.attachment.title_link) {
       expenseObj.invFileType = msg.message.attachment.title.substr(msg.message.attachment.title.length - 4)
+      console.log('url', process.env.ROCKETCHAT_URL);
       msg.reply(expenseResp.pdfReceived())
-      expenseObj.downloadLink = `${ChatURL}${msg.message.attachment.title_link}`
+      expenseObj.downloadLink = `http://${process.env.ROCKETCHAT_URL}${msg.message.attachment.title_link}`
       awaitingInvoiceUpload = false
       awaitingSubmit = true
     }
@@ -157,17 +180,20 @@ module.exports = (robot) => {
   robot.hear(/(submit)/i, function (msg) {
 
     if (awaitingSubmit) {
-      let valid = {}
-      valid.synDeepCheck = isExpenseValid.deepCheck(expenseObj)
+      const {outcome, explain} = isExpenseValid.invfileTypeCheck(expenseObj.invFileType)
 
-      if (!valid.synDeepCheck.outcome) { // compile and return validation errors
-        let validationErrors = ''
-        valid.synDeepCheck.explain.forEach( valErr => validationErrors += `:x:${valErr} \n`)
-        return msg.reply(`Your expense was not valid in the following areas: \n ${validationErrors} \n please re attempt the expense by typing \`@doge expense create\``)
+      if (!outcome) { // return validation error
+        return msg.reply(`${explain} \n please re attempt the expense by typing \`@doge expense create\``)
       }
-      msg.reply(`:ballot_box_with_check:${valid.synDeepCheck.explain}`)
+      msg.reply(`:ballot_box_with_check:${explain}`)
 
-      // either pass message into each Promise OR wait untill the last .then and compile all successes
+      // Master Expense Post Promise Chain:
+      //  1. Check team expense Limit
+      //  2. Bot grabs it's own rocket.chat AUTH token from rocket.chat serv
+      //  3. Bot downloads invoice file from rocket.chat
+      //  4. Bot uploads invoice file to Dropbox
+      //  5. Bot gets user's pub ETH address from sheets -> adds to expObj
+      //  6. Bot Authorizes with Googsheet and posts expenseObj to master exp file
 
       Gsheets.authAndCheckTeamLimit(expenseObj)
       .then(RBU.getAuthToken)
@@ -181,8 +207,12 @@ module.exports = (robot) => {
         return Gsheets.authAndPostExpense(expenseObj)
       })
       .then(response => {
+
+        // it all went happily ever after!
         msg.reply(`:ballot_box_with_check: Expense submission was successful`)
       }).catch( error => {
+
+        // Ruh ro... something broke, error gets returned here.
         msg.reply(`:x: ${error}`)
         console.log('error', error);
 
