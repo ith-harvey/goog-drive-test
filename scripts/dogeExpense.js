@@ -109,16 +109,16 @@ module.exports = (robot) => {
       return msg.reply('To use the `@doge expense create` feature you must first go through the setup wizard. Do so by typing the command `@doge expense setup`.')
     }
 
-    GSheets.authAndGetActiveEmploy(msg).then(response => {
-      const {outcome, explain} = response
-      if (!outcome) {
-        // problem with request to goog sheet or they are not an active employee
-        return msg.reply(explain)
-      }
+    // GSheets.authAndGetActiveEmploy(msg).then(response => {
+      // const {outcome, explain} = response
+      // if (!outcome) {
+      //   // problem with request to goog sheet or they are not an active employee
+      //   return msg.reply(explain)
+      // }
       //active employee
       msg.reply(expenseResp.create())
       awaitingExpense = true
-    })
+    // })
   })
 
   robot.hear(/(.*)/i, function (msg) {
