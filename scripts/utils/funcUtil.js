@@ -2,7 +2,6 @@
 // Requirements for certain util functions
 const {exec} = require('child_process')
 const fs = require('fs')
-
 //
 
 const compose = (...fns) => fns.reduce((f, g) => (...args) => f(g(...args)))
@@ -48,16 +47,9 @@ const getTodaysDateInUTC = () => {
   return `${tD.getUTCFullYear()}/${("0" + (tD.getUTCMonth() + 1)).slice(-2)}/${("0" + tD.getUTCDate()).slice(-2)}`
 }
 
-
-
-
 const checkIfDMOrPublic = (msg) => msg.split(' ')[1] ? msg.split(' ')[1] : msg.split(' ')[0] // if in DM the mssge has an added 'doge' string -> this gets rid of it
 
 const returnTrue = () => true
-
-const promiseWraper = () => new Promise( (resolve, reject) => {
-
-})
 
 const execPromise = cmd => new Promise( (resolve, reject) => {
   exec(cmd, function(err, stdout, stderr) {

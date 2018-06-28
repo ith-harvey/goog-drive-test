@@ -1,6 +1,5 @@
 function checkIfUserIsSetup(robot, userId) {
   // input validation function
-  console.log('running input val!',robot.brain.get(userId));
 
   if (robot.brain.get(userId) === null) {
     //user has not started the setup process.

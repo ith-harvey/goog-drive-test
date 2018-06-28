@@ -1,4 +1,5 @@
 const rp = require('request-promise')
+const request = require('request')
 
 const newUserCheckAndCreate = (robot, userId) => {
   if (robot.brain.get(userId))
@@ -25,9 +26,27 @@ const getAuthToken = () => {
   return rp(options)
 }
 
-const sendUserMessage = (message, robot, userName) => {
-  console.log('msg', message);
+const downloadInvoice = (downloadUrl, data) => {
+  const {authToken: token, userId: botId } = data
+  const options = {
+    method: 'GET',
+    url: downloadUrl,
+    headers:{
+        Cookie: `rc_uid=${botId}; rc_token=${token};`
+    },
+    encoding: null
+  }
+  return new Promise( (resolve, reject) => {
+    request(options, function (error, response, body) {
+      error ? reject(`\`@doge\` is having trouble downloading the expense you uploaded:${error}`) : ''
 
+      const buffer = Buffer.from(body, 'utf8');
+      resolve(buffer)
+    });
+  })
+}
+
+const sendUserMessage = (message, robot, userName) => {
   robot.adapter.chatdriver.getDirectMessageRoomId(userName).then(response => {
     robot.adapter.chatdriver.sendMessageByRoomId(message, response.rid)
   })
@@ -36,5 +55,6 @@ const sendUserMessage = (message, robot, userName) => {
 module.exports = {
   newUserCheckAndCreate,
   getAuthToken,
-  sendUserMessage
+  sendUserMessage,
+  downloadInvoice
 }

@@ -1,9 +1,11 @@
 // google sheets api
-const Gsheets = require('./gsheets')
+const GSheets = require('./gSheets')
 
 // dropbox api
-const Dropbox = require('./dropbox')
+const GDrive = require('./gDrive')
+
+const quickStart = require('./quickstart.js')
 
 module.exports = {
-  Gsheets, Dropbox
+  GSheets, GDrive, quickStart
 }
